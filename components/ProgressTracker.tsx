@@ -306,10 +306,10 @@ export default function ProgressTracker({ totalCount, yearlyGoal, startDate, cou
           <Text style={styles.gridTitle}>Projected Year-End</Text>
           <ProgressCircle 
             progress={projectedProgress} 
-            color="#FFB800"
+            color={projectedProgress > 100 ? '#FFB800' : '#007AFF'}
             showStars={projectedProgress > 100}
           >
-            <Text style={[styles.progressPercent, { color: '#FFB800' }]}>
+            <Text style={[styles.progressPercent, { color: projectedProgress > 100 ? '#FFB800' : '#007AFF' }]}>
               {Math.round(projectedProgress)}%
             </Text>
           </ProgressCircle>
@@ -323,7 +323,7 @@ export default function ProgressTracker({ totalCount, yearlyGoal, startDate, cou
           <Text style={styles.gridTitle}>Monthly Pace</Text>
           <ProgressCircle 
             progress={monthlyProgress}
-            color="#FFB800"
+            color={monthlyProgress > 100 ? '#FFB800' : '#007AFF'}
             showStars={monthlyProgress > 100}
           >
             <Text style={[styles.progressPercent, { color: monthlyProgress > 100 ? '#FFB800' : '#007AFF' }]}>
@@ -340,7 +340,7 @@ export default function ProgressTracker({ totalCount, yearlyGoal, startDate, cou
           <Text style={styles.gridTitle}>Weekly Pace</Text>
           <ProgressCircle 
             progress={weeklyProgress}
-            color="#007AFF"
+            color={weeklyProgress > 100 ? '#FFB800' : '#007AFF'}
             showStars={weeklyProgress > 100}
           >
             <Text style={[styles.progressPercent, { color: weeklyProgress > 100 ? '#FFB800' : '#007AFF' }]}>

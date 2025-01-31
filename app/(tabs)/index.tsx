@@ -80,14 +80,7 @@ export default function HomeScreen() {
     if (habit.type === 'yesno') {
       return `🔥 ${habit.currentStreak} days`;
     }
-
-    const today = new Date().toISOString().split('T')[0];
-    const count = habit.counts[today] || 0;
-    
-    if (!habit.goal) return `${count} today`;
-
-    const progress = (count / habit.goal) * 100;
-    return `${count} / ${habit.goal} (${Math.round(progress)}%)`;
+    return '';  // Return empty string for count-type habits
   };
 
   const handleHabitPress = (habit: Habit) => {
@@ -138,7 +131,9 @@ export default function HomeScreen() {
               >
                 <Text style={styles.habitName}>{habit.name}</Text>
               </TouchableOpacity>
-              <Text style={styles.streakText}>{getProgressText(habit)}</Text>
+              {habit.type === 'yesno' && (
+                <Text style={styles.streakText}>{getProgressText(habit)}</Text>
+              )}
             </View>
             {habit.type === 'yesno' ? (
               <View style={[

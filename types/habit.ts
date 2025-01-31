@@ -7,12 +7,12 @@ export interface Habit {
   type: HabitType;
   goal?: number;
   timeFrame?: TimeFrame;
+  yearlyGoal: number; // Required field for count-type habits
   createdAt: Date;
   currentStreak: number;
   completedDates: string[]; // ISO date strings
   // For count-type habits, store the count for each date
-  counts: { [date: string]: number };
-  yearlyGoal?: number; // Optional yearly goal for count-type habits
+  counts: Record<string, number>;
 }
 
 export interface HabitCompletion {

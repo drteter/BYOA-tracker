@@ -9,6 +9,7 @@ export const habitService = {
     name: string;
     type: HabitType;
     goal?: number;
+    yearlyGoal?: number;
     timeFrame?: TimeFrame;
   }): Promise<string> {
     try {
@@ -17,6 +18,7 @@ export const habitService = {
         type: data.type,
         goal: data.goal,
         timeFrame: data.timeFrame,
+        yearlyGoal: data.type === 'count' ? (data.yearlyGoal || data.goal || 100000) : 0,
         createdAt: new Date(),
         currentStreak: 0,
         completedDates: [],
@@ -37,13 +39,17 @@ export const habitService = {
   async getAllHabits(): Promise<Habit[]> {
     try {
       const querySnapshot = await getDocs(collection(db, HABITS_COLLECTION));
-      const habits = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        counts: doc.data().counts || {},
-        type: doc.data().type || 'yesno', // Default to yesno for backward compatibility
-      } as Habit));
+      const habits = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          counts: data.counts || {},
+          type: data.type || 'yesno', // Default to yesno for backward compatibility
+          yearlyGoal: data.type === 'count' ? (data.yearlyGoal || 100000) : 0, // Ensure yearlyGoal is set for count habits
+        } as Habit;
+      });
       return habits;
     } catch (error) {
       console.error('Error fetching habits:', error);
@@ -200,6 +206,26 @@ export const habitService = {
       };
     } catch (error) {
       console.error('Error getting habit stats:', error);
+      throw error;
+    }
+  },
+
+  async updateHabitGoals(habitId: string, updates: { goal?: number; yearlyGoal?: number; timeFrame?: TimeFrame }): Promise<void> {
+    try {
+      const habitRef = doc(db, HABITS_COLLECTION, habitId);
+      const habitDoc = await getDoc(habitRef);
+
+      if (!habitDoc.exists()) {
+        throw new Error('Habit not found');
+      }
+
+      await updateDoc(habitRef, {
+        ...(updates.goal !== undefined && { goal: updates.goal }),
+        ...(updates.yearlyGoal !== undefined && { yearlyGoal: updates.yearlyGoal }),
+        ...(updates.timeFrame !== undefined && { timeFrame: updates.timeFrame }),
+      });
+    } catch (error) {
+      console.error('Error updating habit goals:', error);
       throw error;
     }
   },

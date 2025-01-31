@@ -2,15 +2,18 @@ import { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert, TextInput, Platform } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { habitService } from '../../services/habitService';
-import { Habit } from '../../types/habit';
+import { Habit, HabitType, TimeFrame } from '../../types/habit';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
+import AddHabitModal from '../../components/AddHabitModal';
 
 export default function SettingsScreen() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
 
   const loadHabits = useCallback(async () => {
     try {
@@ -53,12 +56,42 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleEditGoals = (habit: Habit) => {
+    setSelectedHabit(habit);
+    setIsEditModalVisible(true);
+  };
+
+  const handleUpdateHabit = async (data: {
+    name: string;
+    type: HabitType;
+    goal?: number;
+    yearlyGoal?: number;
+    timeFrame?: TimeFrame;
+  }) => {
+    if (!selectedHabit) return;
+
+    try {
+      setIsLoading(true);
+      await habitService.updateHabitGoals(selectedHabit.id, {
+        goal: data.goal,
+        yearlyGoal: data.yearlyGoal,
+        timeFrame: data.timeFrame,
+      });
+      setIsEditModalVisible(false);
+      setSelectedHabit(null);
+      await loadHabits();
+    } catch (error) {
+      console.error('Error updating habit:', error);
+      Alert.alert('Error', 'Failed to update habit');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const deleteHabit = async (habitId: string) => {
     try {
-      console.log('Attempting to delete habit with ID:', habitId);
       setIsLoading(true);
       await habitService.deleteHabit(habitId);
-      console.log('Habit deleted, reloading habits...');
       await loadHabits();
     } catch (error) {
       console.error('Error deleting habit:', error);
@@ -114,6 +147,14 @@ export default function SettingsScreen() {
                   >
                     <FontAwesome name="pencil" size={20} color="#007AFF" />
                   </TouchableOpacity>
+                  {habit.type === 'count' && (
+                    <TouchableOpacity 
+                      style={styles.iconButton}
+                      onPress={() => handleEditGoals(habit)}
+                    >
+                      <FontAwesome name="sliders" size={20} color="#007AFF" />
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity 
                     style={[styles.iconButton, styles.deleteButton]}
                     onPress={() => deleteHabit(habit.id)}
@@ -126,6 +167,25 @@ export default function SettingsScreen() {
           </View>
         ))}
       </ScrollView>
+
+      {selectedHabit && (
+        <AddHabitModal
+          visible={isEditModalVisible}
+          onClose={() => {
+            setIsEditModalVisible(false);
+            setSelectedHabit(null);
+          }}
+          onSubmit={handleUpdateHabit}
+          initialValues={{
+            name: selectedHabit.name,
+            type: selectedHabit.type,
+            goal: selectedHabit.goal,
+            yearlyGoal: selectedHabit.yearlyGoal,
+            timeFrame: selectedHabit.timeFrame,
+          }}
+          isEditing={true}
+        />
+      )}
     </View>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -18,15 +18,35 @@ interface AddHabitModalProps {
     name: string;
     type: HabitType;
     goal?: number;
+    yearlyGoal?: number;
     timeFrame?: TimeFrame;
   }) => void;
+  initialValues?: {
+    name?: string;
+    type?: HabitType;
+    goal?: number;
+    yearlyGoal?: number;
+    timeFrame?: TimeFrame;
+  };
+  isEditing?: boolean;
 }
 
-export default function AddHabitModal({ visible, onClose, onSubmit }: AddHabitModalProps) {
-  const [name, setName] = useState('');
-  const [type, setType] = useState<HabitType>('yesno');
-  const [goal, setGoal] = useState<string>('');
-  const [timeFrame, setTimeFrame] = useState<TimeFrame>('day');
+export default function AddHabitModal({ visible, onClose, onSubmit, initialValues, isEditing }: AddHabitModalProps) {
+  const [name, setName] = useState(initialValues?.name || '');
+  const [type, setType] = useState<HabitType>(initialValues?.type || 'yesno');
+  const [goal, setGoal] = useState(initialValues?.goal?.toString() || '');
+  const [yearlyGoal, setYearlyGoal] = useState(initialValues?.yearlyGoal?.toString() || '');
+  const [timeFrame, setTimeFrame] = useState<TimeFrame | undefined>(initialValues?.timeFrame);
+
+  useEffect(() => {
+    if (visible) {
+      setName(initialValues?.name || '');
+      setType(initialValues?.type || 'yesno');
+      setGoal(initialValues?.goal?.toString() || '');
+      setYearlyGoal(initialValues?.yearlyGoal?.toString() || '');
+      setTimeFrame(initialValues?.timeFrame);
+    }
+  }, [visible, initialValues]);
 
   const handleSubmit = () => {
     if (!name.trim()) return;
@@ -34,17 +54,18 @@ export default function AddHabitModal({ visible, onClose, onSubmit }: AddHabitMo
     onSubmit({
       name: name.trim(),
       type,
-      ...(type === 'count' && goal ? {
-        goal: parseInt(goal),
-        timeFrame,
-      } : {}),
+      ...(goal && { goal: parseInt(goal, 10) }),
+      ...(yearlyGoal && { yearlyGoal: parseInt(yearlyGoal, 10) }),
+      ...(timeFrame && { timeFrame }),
     });
 
-    // Reset form
-    setName('');
-    setType('yesno');
-    setGoal('');
-    setTimeFrame('day');
+    if (!isEditing) {
+      setName('');
+      setType('yesno');
+      setGoal('');
+      setYearlyGoal('');
+      setTimeFrame(undefined);
+    }
   };
 
   return (
@@ -57,9 +78,9 @@ export default function AddHabitModal({ visible, onClose, onSubmit }: AddHabitMo
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <ScrollView>
-            <Text style={styles.title}>Add New Habit</Text>
+            <Text style={styles.title}>{isEditing ? 'Edit Habit' : 'Add New Habit'}</Text>
 
-            <Text style={styles.label}>Habit Name</Text>
+            <Text style={styles.label}>Name</Text>
             <TextInput
               style={styles.input}
               value={name}
@@ -68,7 +89,7 @@ export default function AddHabitModal({ visible, onClose, onSubmit }: AddHabitMo
               autoFocus
             />
 
-            <Text style={styles.label}>Habit Type</Text>
+            <Text style={styles.label}>Type</Text>
             <View style={styles.typeContainer}>
               <TouchableOpacity
                 style={[styles.typeButton, type === 'yesno' && styles.selectedType]}
@@ -90,12 +111,21 @@ export default function AddHabitModal({ visible, onClose, onSubmit }: AddHabitMo
 
             {type === 'count' && (
               <>
-                <Text style={styles.label}>Goal</Text>
+                <Text style={styles.label}>Goal per Time Frame</Text>
                 <TextInput
                   style={styles.input}
                   value={goal}
                   onChangeText={setGoal}
-                  placeholder="Enter your target number"
+                  placeholder="Enter goal amount"
+                  keyboardType="numeric"
+                />
+
+                <Text style={styles.label}>Yearly Goal</Text>
+                <TextInput
+                  style={styles.input}
+                  value={yearlyGoal}
+                  onChangeText={setYearlyGoal}
+                  placeholder="Enter yearly goal"
                   keyboardType="numeric"
                 />
 
@@ -130,7 +160,7 @@ export default function AddHabitModal({ visible, onClose, onSubmit }: AddHabitMo
                 onPress={handleSubmit}
                 disabled={!name.trim()}
               >
-                <Text style={styles.addButtonText}>Add Habit</Text>
+                <Text style={styles.addButtonText}>{isEditing ? 'Save' : 'Add'}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -144,13 +174,15 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 20,
     padding: 20,
+    width: '50%',
+    maxWidth: 400,
     maxHeight: '90%',
   },
   title: {
