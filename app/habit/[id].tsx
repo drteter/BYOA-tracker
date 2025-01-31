@@ -203,13 +203,15 @@ export default function HabitDetails() {
       }).length;
 
       // Calculate progress based on weekly frequency goal
-      const weeklyGoal = habit.weeklyFrequency || 7; // Default to 7 if no goal set
+      const weeklyGoal = habit.weeklyFrequency || 5; // Default to 5 if no goal set
       const progress = Math.min(100, (completionsThisWeek / weeklyGoal) * 100);
+      const isGoalAchieved = completionsThisWeek >= weeklyGoal;
 
       return {
         thisWeek: completionsThisWeek,
         timesPerWeek: completionsThisWeek,
         progress,
+        isGoalAchieved
       };
     }
 

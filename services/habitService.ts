@@ -6,31 +6,35 @@ import { v4 as uuidv4 } from 'uuid';
 const HABITS_COLLECTION = 'habits';
 
 export const habitService = {
-  async createHabit(data: {
-    name: string;
-    type: HabitType;
-    goal?: number;
-    timeFrame?: TimeFrame;
-    weeklyFrequency?: number;
-  }): Promise<void> {
+  async createHabit(
+    name: string,
+    type: HabitType,
+    goal?: number,
+    timeFrame?: TimeFrame,
+    weeklyFrequency: number = 5
+  ): Promise<void> {
     try {
       const newHabit: Habit = {
         id: uuidv4(),
-        name: data.name,
-        type: data.type,
+        name,
+        type,
         createdAt: new Date(),
         currentStreak: 0,
         completedDates: [],
         counts: {},
-        weeklyFrequency: data.weeklyFrequency || 5,
-        ...(data.type === 'count' && {
-          goal: data.goal,
-          timeFrame: data.timeFrame,
+        weeklyFrequency,
+        ...(type === 'count' && {
+          goal,
+          timeFrame,
           yearlyGoal: 100000
         })
       };
       
-      await setDoc(doc(db, HABITS_COLLECTION, newHabit.id), newHabit);
+      const habitRef = doc(db, HABITS_COLLECTION, newHabit.id);
+      await setDoc(habitRef, {
+        ...newHabit,
+        createdAt: Timestamp.fromDate(newHabit.createdAt),
+      });
     } catch (error) {
       console.error('Error creating habit:', error);
       throw error;
@@ -45,7 +49,7 @@ export const habitService = {
         return {
           id: doc.id,
           ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
           counts: data.counts || {},
           type: data.type || 'yesno',
           goal: data.type === 'count' ? (data.goal || data.yearlyGoal || 0) : undefined,
@@ -222,7 +226,14 @@ export const habitService = {
   ): Promise<void> {
     try {
       const habitRef = doc(db, HABITS_COLLECTION, habitId);
-      await updateDoc(habitRef, updates);
+      const updateData: Record<string, any> = {};
+      
+      // Only include defined values in the update
+      if (updates.goal !== undefined) updateData.goal = updates.goal;
+      if (updates.timeFrame !== undefined) updateData.timeFrame = updates.timeFrame;
+      if (updates.weeklyFrequency !== undefined) updateData.weeklyFrequency = updates.weeklyFrequency;
+      
+      await updateDoc(habitRef, updateData);
     } catch (error) {
       console.error('Error updating habit goals:', error);
       throw error;

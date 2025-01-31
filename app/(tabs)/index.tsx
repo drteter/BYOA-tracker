@@ -7,6 +7,9 @@ import { router, useFocusEffect } from 'expo-router';
 import AddHabitModal from '../../components/AddHabitModal';
 import { FontAwesome } from '@expo/vector-icons';
 import CountInput from '../../components/CountInput';
+import GoalAchievedAnimation from '../../components/GoalAchievedAnimation';
+import HabitDashboard from '../../components/HabitDashboard';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const calculateProjectedProgress = (counts: Record<string, number>, yearlyGoal: number): number => {
   const today = new Date();
@@ -159,48 +162,165 @@ export default function HomeScreen() {
           <Text style={styles.caption}>The end of a melody is not its point.</Text>
         </View>
 
-        {habits.map((habit) => (
-          <TouchableOpacity
-            key={habit.id}
-            style={styles.habitItem}
-            onPress={() => handleHabitPress(habit)}
-          >
-            <View style={styles.habitInfo}>
-              <TouchableOpacity 
-                onPress={() => router.push(`/habit/${habit.id}`)}
-                style={styles.habitNameButton}
+        {/* Weekly Habits Section */}
+        <Text style={styles.sectionTitle}>Weekly Habits</Text>
+        {habits
+          .filter(habit => habit.type === 'yesno')
+          .map(habit => {
+            const today = new Date();
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay());
+            startOfWeek.setHours(0, 0, 0, 0);
+
+            const completionsThisWeek = habit.completedDates.filter(date => {
+              const completionDate = new Date(date);
+              return completionDate >= startOfWeek && completionDate <= today;
+            }).length;
+            
+            const isGoalAchieved = completionsThisWeek >= (habit.weeklyFrequency ?? 5);
+
+            return (
+              <LinearGradient
+                key={habit.id}
+                colors={isGoalAchieved 
+                  ? ['#DAA520', '#B8860B', '#8B6914'] 
+                  : ['#f8f8f8', '#f8f8f8']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.habitItem}
               >
-                <View style={styles.habitNameContainer}>
-                  <Text style={styles.habitName}>{habit.name}</Text>
-                  {habit.type === 'count' && (
+                <View style={styles.habitInfo}>
+                  <View style={styles.habitTitleRow}>
+                    <TouchableOpacity 
+                      style={styles.habitNameButton}
+                      onPress={() => router.push(`/habit/${habit.id}`)}
+                    >
+                      <Text style={[
+                        styles.habitName,
+                        isGoalAchieved && { color: '#FFFFFF' }
+                      ]}>
+                        {habit.name}
+                      </Text>
+                    </TouchableOpacity>
+                    {isGoalAchieved && (
+                      <FontAwesome 
+                        name="check-circle" 
+                        size={20} 
+                        color="#FFFFFF" 
+                        style={styles.checkmark}
+                      />
+                    )}
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.progressArea}
+                    onPress={() => {
+                      if (habit.type === 'count') {
+                        setSelectedHabit(habit);
+                        setIsCountModalVisible(true);
+                      }
+                    }}
+                  >
                     <Text style={[
-                      styles.trackingStatus,
-                      { color: calculateProjectedProgress(habit.counts || {}, habit.yearlyGoal || 100000) >= 100 ? '#4CD964' : '#FF3B30' }
+                      styles.streakText,
+                      isGoalAchieved && { color: '#FFFFFF' }
                     ]}>
-                      {calculateProjectedProgress(habit.counts || {}, habit.yearlyGoal || 100000) >= 100 ? 'ON TRACK' : 'OFF TRACK'}
+                      {getProgressText(habit)}
                     </Text>
-                  )}
+                  </TouchableOpacity>
                 </View>
-              </TouchableOpacity>
-              {habit.type === 'yesno' && (
-                <Text style={styles.streakText}>{getProgressText(habit)}</Text>
-              )}
-            </View>
-            {habit.type === 'yesno' ? (
-              <View style={[
-                styles.checkbox,
-                habit.completedDates.includes(new Date().toISOString().split('T')[0]) && styles.checked
-              ]} />
-            ) : (
-              <View style={styles.countContainer}>
-                <Text style={styles.countText}>
-                  {habit.counts[new Date().toISOString().split('T')[0]] || 0}
-                </Text>
-                <FontAwesome name="pencil" size={16} color="#007AFF" />
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
+                
+                {habit.type === 'yesno' && (
+                  <TouchableOpacity
+                    onPress={() => toggleHabitCompletion(habit)}
+                    style={[
+                      styles.checkbox,
+                      habit.completedToday && styles.checked
+                    ]}
+                  />
+                )}
+              </LinearGradient>
+            );
+          })}
+
+        {/* Count-type Habits Section */}
+        <Text style={styles.sectionTitle}>Perpetual Habits</Text>
+        {habits
+          .filter(habit => habit.type === 'count')
+          .map(habit => {
+            const today = new Date();
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay());
+            startOfWeek.setHours(0, 0, 0, 0);
+
+            const completionsThisWeek = habit.completedDates.filter(date => {
+              const completionDate = new Date(date);
+              return completionDate >= startOfWeek && completionDate <= today;
+            }).length;
+            
+            const isGoalAchieved = completionsThisWeek >= (habit.weeklyFrequency ?? 5);
+
+            return (
+              <LinearGradient
+                key={habit.id}
+                colors={isGoalAchieved 
+                  ? ['#DAA520', '#B8860B', '#8B6914'] 
+                  : ['#f8f8f8', '#f8f8f8']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.habitItem}
+              >
+                <View style={styles.habitInfo}>
+                  <View style={styles.habitTitleRow}>
+                    <TouchableOpacity 
+                      style={styles.habitNameButton}
+                      onPress={() => router.push(`/habit/${habit.id}`)}
+                    >
+                      <Text style={[
+                        styles.habitName,
+                        isGoalAchieved && { color: '#FFFFFF' }
+                      ]}>
+                        {habit.name}
+                      </Text>
+                    </TouchableOpacity>
+                    {isGoalAchieved && (
+                      <FontAwesome 
+                        name="check-circle" 
+                        size={20} 
+                        color="#FFFFFF" 
+                        style={styles.checkmark}
+                      />
+                    )}
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.progressArea}
+                    onPress={() => {
+                      if (habit.type === 'count') {
+                        setSelectedHabit(habit);
+                        setIsCountModalVisible(true);
+                      }
+                    }}
+                  >
+                    <Text style={[
+                      styles.streakText,
+                      isGoalAchieved && { color: '#FFFFFF' }
+                    ]}>
+                      {getProgressText(habit)}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {habit.type === 'yesno' && (
+                  <TouchableOpacity
+                    onPress={() => toggleHabitCompletion(habit)}
+                    style={[
+                      styles.checkbox,
+                      habit.completedToday && styles.checked
+                    ]}
+                  />
+                )}
+              </LinearGradient>
+            );
+          })}
       </ScrollView>
 
       <TouchableOpacity
@@ -220,11 +340,8 @@ export default function HomeScreen() {
 
       {selectedHabit && (
         <CountInput
-          visible={isCountModalVisible}
-          onClose={() => {
-            setIsCountModalVisible(false);
-            setSelectedHabit(null);
-          }}
+          isVisible={isCountModalVisible}
+          onClose={() => setIsCountModalVisible(false)}
           onSubmit={handleUpdateCount}
           currentCount={selectedHabit.counts[new Date().toISOString().split('T')[0]] || 0}
           habitName={selectedHabit.name}
@@ -256,9 +373,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 15,
-    backgroundColor: '#f8f8f8',
     borderRadius: 10,
     marginBottom: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   habitInfo: {
     flex: 1,
@@ -355,5 +476,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  habitTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  checkmark: {
+    marginLeft: 4,
+  },
+  progressArea: {
+    flex: 1,
+    marginTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 24,
+    marginBottom: 16,
+    paddingHorizontal: 16,
   },
 });

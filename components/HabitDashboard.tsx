@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Svg, Circle } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
+import { FontAwesome } from '@expo/vector-icons';
 
 interface HabitDashboardProps {
   name: string;
@@ -8,6 +10,7 @@ interface HabitDashboardProps {
   thisWeek: number;
   timesPerWeek: number;
   progress: number; // 0 to 100
+  isGoalAchieved: boolean;
 }
 
 export default function HabitDashboard({ 
@@ -15,78 +18,144 @@ export default function HabitDashboard({
   createdAt, 
   thisWeek,
   timesPerWeek,
-  progress 
+  progress,
+  isGoalAchieved = false
 }: HabitDashboardProps) {
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{name}</Text>
-      <Text style={styles.subtitle}>
-        Created {createdAt.toLocaleDateString()}
-      </Text>
-
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{thisWeek}</Text>
-          <Text style={styles.statLabel}>This Week</Text>
+    <View style={styles.outerContainer}>
+      {isGoalAchieved && (
+        <View style={styles.celebrationBanner}>
+          <Text style={styles.celebrationText}>
+            YOU FUCKING DID IT GOOD FOR YOU
+          </Text>
         </View>
+      )}
+      <LinearGradient
+        colors={isGoalAchieved 
+          ? ['#DAA520', '#B8860B', '#8B6914'] 
+          : ['#ffffff', '#ffffff']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.container}
+      >
+        <View style={styles.titleRow}>
+          <Text style={[
+            styles.title, 
+            isGoalAchieved && { color: '#FFFFFF' }
+          ]}>
+            {name}
+          </Text>
+          {isGoalAchieved && (
+            <FontAwesome 
+              name="check-circle" 
+              size={24} 
+              color="#FFFFFF" 
+              style={styles.checkmark}
+            />
+          )}
+        </View>
+        <Text style={[
+          styles.subtitle,
+          isGoalAchieved && { color: '#FFFFFF' }
+        ]}>
+          Created {createdAt.toLocaleDateString()}
+        </Text>
 
-        <View style={styles.progressCircle}>
-          <View style={styles.progressCircleContainer}>
-            <Svg width={100} height={100}>
-              {/* Background circle */}
-              <Circle
-                cx={50}
-                cy={50}
-                r={radius}
-                stroke="#E5E5EA"
-                strokeWidth={8}
-                fill="none"
-              />
-              {/* Progress circle */}
-              <Circle
-                cx={50}
-                cy={50}
-                r={radius}
-                stroke="#007AFF"
-                strokeWidth={8}
-                fill="none"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                transform="rotate(-90 50 50)"
-              />
-            </Svg>
-            <View style={styles.progressTextContainer}>
-              <Text style={styles.progressText}>
-                {Math.round(progress)}%
-              </Text>
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={[
+              styles.statValue,
+              isGoalAchieved && { color: '#FFFFFF' }
+            ]}>{thisWeek}</Text>
+            <Text style={[
+              styles.statLabel,
+              isGoalAchieved && { color: '#FFFFFF' }
+            ]}>This Week</Text>
+          </View>
+
+          <View style={styles.progressCircle}>
+            <View style={styles.progressCircleContainer}>
+              <Svg width={100} height={100}>
+                <Circle
+                  cx={50}
+                  cy={50}
+                  r={radius}
+                  stroke={isGoalAchieved ? '#FFFFFF40' : '#E5E5EA'}
+                  strokeWidth={8}
+                  fill="none"
+                />
+                <Circle
+                  cx={50}
+                  cy={50}
+                  r={radius}
+                  stroke={isGoalAchieved ? '#FFFFFF' : '#007AFF'}
+                  strokeWidth={8}
+                  fill="none"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  transform="rotate(-90 50 50)"
+                />
+              </Svg>
+              <View style={styles.progressTextContainer}>
+                <Text style={[
+                  styles.progressText,
+                  isGoalAchieved && { color: '#FFFFFF' }
+                ]}>
+                  {Math.round(progress)}%
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{timesPerWeek}</Text>
-          <Text style={styles.statLabel}>Times/Week</Text>
+          <View style={styles.statItem}>
+            <Text style={[
+              styles.statValue,
+              isGoalAchieved && { color: '#FFFFFF' }
+            ]}>{timesPerWeek}</Text>
+            <Text style={[
+              styles.statLabel,
+              isGoalAchieved && { color: '#FFFFFF' }
+            ]}>Times/Week</Text>
+          </View>
         </View>
-      </View>
+      </LinearGradient>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
   container: {
     padding: 20,
-    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 4,
+  },
+  checkmark: {
+    marginLeft: 8,
   },
   subtitle: {
     fontSize: 14,
@@ -134,5 +203,18 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#007AFF',
+  },
+  celebrationBanner: {
+    backgroundColor: '#8B6914',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  celebrationText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
 }); 
