@@ -65,7 +65,6 @@ export default function SettingsScreen() {
     name: string;
     type: HabitType;
     goal?: number;
-    yearlyGoal?: number;
     timeFrame?: TimeFrame;
   }) => {
     if (!selectedHabit) return;
@@ -74,7 +73,6 @@ export default function SettingsScreen() {
       setIsLoading(true);
       await habitService.updateHabitGoals(selectedHabit.id, {
         goal: data.goal,
-        yearlyGoal: data.yearlyGoal,
         timeFrame: data.timeFrame,
       });
       setIsEditModalVisible(false);
@@ -180,7 +178,6 @@ export default function SettingsScreen() {
             name: selectedHabit.name,
             type: selectedHabit.type,
             goal: selectedHabit.goal,
-            yearlyGoal: selectedHabit.yearlyGoal,
             timeFrame: selectedHabit.timeFrame,
           }}
           isEditing={true}

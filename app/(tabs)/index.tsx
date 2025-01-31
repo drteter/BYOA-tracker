@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert, Platform, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { habitService } from '../../services/habitService';
-import { Habit } from '../../types/habit';
+import { Habit, HabitType, TimeFrame } from '../../types/habit';
 import { router, useFocusEffect } from 'expo-router';
 import AddHabitModal from '../../components/AddHabitModal';
 import { FontAwesome } from '@expo/vector-icons';
@@ -47,13 +47,18 @@ export default function HomeScreen() {
 
   const handleAddHabit = async (data: {
     name: string;
-    type: 'yesno' | 'count';
+    type: HabitType;
     goal?: number;
-    timeFrame?: 'day' | 'week' | 'month' | 'year';
+    timeFrame?: TimeFrame;
   }) => {
     try {
       setIsLoading(true);
-      await habitService.createHabit(data);
+      await habitService.createHabit(
+        data.name,
+        data.type,
+        data.goal,
+        data.timeFrame
+      );
       await loadHabits();
       setIsAddModalVisible(false);
     } catch (error) {
@@ -121,6 +126,11 @@ export default function HomeScreen() {
     }
   };
 
+  const calculateProgress = (habit: Habit): number => {
+    if (!habit.goal || !habit.timeFrame) return 0;
+    return habitService.calculateProgress(habit.counts || {}, habit.goal, habit.timeFrame);
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
@@ -154,9 +164,9 @@ export default function HomeScreen() {
                   {habit.type === 'count' && (
                     <Text style={[
                       styles.trackingStatus,
-                      { color: calculateProjectedProgress(habit.counts || {}, habit.yearlyGoal || 100000) >= 90 ? '#4CD964' : '#FF3B30' }
+                      { color: calculateProjectedProgress(habit.counts || {}, habit.yearlyGoal || 100000) >= 100 ? '#4CD964' : '#FF3B30' }
                     ]}>
-                      {calculateProjectedProgress(habit.counts || {}, habit.yearlyGoal || 100000) >= 90 ? 'ON TRACK' : 'OFF TRACK'}
+                      {calculateProjectedProgress(habit.counts || {}, habit.yearlyGoal || 100000) >= 100 ? 'ON TRACK' : 'OFF TRACK'}
                     </Text>
                   )}
                 </View>

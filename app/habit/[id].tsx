@@ -314,7 +314,7 @@ export default function HabitDetails() {
         {habit && habit.type === 'count' && (
           <ProgressTracker
             totalCount={Object.values(habit.counts || {}).reduce((sum, count) => sum + count, 0)}
-            yearlyGoal={habit.yearlyGoal || 100000} // Default to 100,000 if not set
+            yearlyGoal={habit.goal || 0}
             startDate={new Date(habit.createdAt)}
             counts={habit.counts || {}}
           />
@@ -332,7 +332,7 @@ export default function HabitDetails() {
           currentCount={selectedDate ? (habit.counts[selectedDate] || 0) : 0}
           habitName={habit.name}
           goal={habit.goal}
-          date={selectedDate}
+          date={new Date(selectedDate)}
         />
       )}
     </View>
