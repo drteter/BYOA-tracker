@@ -244,42 +244,57 @@ function ProgressCircle({
 
 export default function ProgressTracker({ totalCount, yearlyGoal, startDate, counts }: ProgressTrackerProps) {
   const today = new Date();
-  const startOfYear = new Date(today.getFullYear(), 0, 1);
-  const dayOfYear = Math.ceil((today.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
-  const daysInYear = 365; // Using fixed 365 for consistent projections
   
-  // Calculate projected year-end total based on current pace
-  const projectedTotal = Math.round((totalCount / dayOfYear) * daysInYear);
-  const projectedProgress = (projectedTotal / yearlyGoal) * 100;
+  const calculateTotals = () => {
+    const startOfYear = new Date(today.getFullYear(), 0, 1);
+    const dayOfYear = Math.ceil((today.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+    const daysInYear = 365;
 
-  // Calculate monthly target and progress
-  const monthlyTarget = Math.round(yearlyGoal / 12);
-  const currentMonth = today.getMonth();
-  const monthStart = new Date(today.getFullYear(), currentMonth, 1);
-  
-  const monthlyTotal = Object.entries(counts).reduce((total, [dateStr, count]) => {
-    const date = new Date(dateStr);
-    if (date.getMonth() === currentMonth && date.getFullYear() === today.getFullYear()) {
-      return total + count;
-    }
-    return total;
-  }, 0);
-  const monthlyProgress = (monthlyTotal / monthlyTarget) * 100;
+    // Calculate monthly target and total
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthlyTotal = Object.entries(counts).reduce((sum, [date, count]) => {
+      const countDate = new Date(date);
+      if (countDate >= monthStart && countDate <= today) {
+        return sum + count;
+      }
+      return sum;
+    }, 0);
 
-  // Calculate weekly target and progress
-  const weeklyTarget = Math.round(yearlyGoal / 52);
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay());
-  weekStart.setHours(0, 0, 0, 0);
+    // Calculate weekly target and total
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const weeklyTotal = Object.entries(counts).reduce((sum, [date, count]) => {
+      const countDate = new Date(date);
+      if (countDate >= weekStart && countDate <= today) {
+        return sum + count;
+      }
+      return sum;
+    }, 0);
+
+    // Calculate projected total based on current pace
+    const dailyAverage = totalCount / Math.max(1, dayOfYear);
+    const projectedTotal = Math.round(dailyAverage * daysInYear);
+
+    return {
+      total: totalCount,
+      projected: projectedTotal,
+      monthly: monthlyTotal,
+      weekly: weeklyTotal
+    };
+  };
+
+  const totals = calculateTotals();
   
-  const weeklyTotal = Object.entries(counts).reduce((total, [dateStr, count]) => {
-    const date = new Date(dateStr);
-    if (date >= weekStart && date <= today) {
-      return total + count;
-    }
-    return total;
-  }, 0);
-  const weeklyProgress = (weeklyTotal / weeklyTarget) * 100;
+  // Calculate targets
+  const monthlyTarget = yearlyGoal ? Math.round(yearlyGoal / 12) : 0;
+  const weeklyTarget = yearlyGoal ? Math.round(yearlyGoal / 52) : 0;
+  
+  // Calculate progress percentages
+  const annualProgress = yearlyGoal ? (totals.total / yearlyGoal) * 100 : 0;
+  const projectedProgress = yearlyGoal ? (totals.projected / yearlyGoal) * 100 : 0;
+  const monthlyProgress = monthlyTarget ? (totals.monthly / monthlyTarget) * 100 : 0;
+  const weeklyProgress = weeklyTarget ? (totals.weekly / weeklyTarget) * 100 : 0;
 
   // Format numbers with commas for thousands and one decimal place
   const formatNumber = (num: number) => {
@@ -296,13 +311,13 @@ export default function ProgressTracker({ totalCount, yearlyGoal, startDate, cou
       <View style={styles.gridContainer}>
         <View style={styles.gridItem}>
           <Text style={styles.gridTitle}>Annual Progress</Text>
-          <ProgressCircle progress={(totalCount / yearlyGoal) * 100}>
+          <ProgressCircle progress={annualProgress}>
             <Text style={styles.progressPercent}>
-              {Math.round((totalCount / yearlyGoal) * 100)}%
+              {Math.round(annualProgress)}%
             </Text>
           </ProgressCircle>
           <View style={styles.belowCircleContainer}>
-            <Text style={styles.progressCount}>{formatNumber(totalCount)}</Text>
+            <Text style={styles.progressCount}>{formatNumber(totals.total)}</Text>
             <Text style={styles.progressLabel}>of {formatNumber(yearlyGoal)}</Text>
           </View>
         </View>
@@ -310,16 +325,16 @@ export default function ProgressTracker({ totalCount, yearlyGoal, startDate, cou
         <View style={styles.gridItem}>
           <Text style={styles.gridTitle}>Projected Year-End</Text>
           <ProgressCircle 
-            progress={projectedProgress} 
-            color={projectedProgress > 100 ? '#FFB800' : '#007AFF'}
-            showStars={projectedProgress > 100}
+            progress={(totals.projected / yearlyGoal) * 100} 
+            color={(totals.projected / yearlyGoal) > 100 ? '#FFB800' : '#007AFF'}
+            showStars={(totals.projected / yearlyGoal) > 100}
           >
-            <Text style={[styles.progressPercent, { color: projectedProgress > 100 ? '#FFB800' : '#007AFF' }]}>
-              {Math.round(projectedProgress)}%
+            <Text style={[styles.progressPercent, { color: (totals.projected / yearlyGoal) > 100 ? '#FFB800' : '#007AFF' }]}>
+              {Math.round((totals.projected / yearlyGoal) * 100)}%
             </Text>
           </ProgressCircle>
           <View style={styles.belowCircleContainer}>
-            <Text style={styles.progressCount}>{formatNumber(projectedTotal)}</Text>
+            <Text style={styles.progressCount}>{formatNumber(totals.projected)}</Text>
             <Text style={styles.progressLabel}>at current pace</Text>
           </View>
         </View>
@@ -336,7 +351,7 @@ export default function ProgressTracker({ totalCount, yearlyGoal, startDate, cou
             </Text>
           </ProgressCircle>
           <View style={styles.belowCircleContainer}>
-            <Text style={styles.progressCount}>{formatNumber(monthlyTotal)}</Text>
+            <Text style={styles.progressCount}>{formatNumber(totals.monthly)}</Text>
             <Text style={styles.progressLabel}>target: {formatNumber(monthlyTarget)}/month</Text>
           </View>
         </View>
@@ -353,7 +368,7 @@ export default function ProgressTracker({ totalCount, yearlyGoal, startDate, cou
             </Text>
           </ProgressCircle>
           <View style={styles.belowCircleContainer}>
-            <Text style={styles.progressCount}>{formatNumber(weeklyTotal)}</Text>
+            <Text style={styles.progressCount}>{formatNumber(totals.weekly)}</Text>
             <Text style={styles.progressLabel}>target: {formatNumber(weeklyTarget)}/week</Text>
           </View>
         </View>

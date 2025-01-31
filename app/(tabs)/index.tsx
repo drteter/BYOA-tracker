@@ -154,8 +154,19 @@ export default function HomeScreen() {
   };
 
   const calculateProgress = (habit: Habit): number => {
-    if (!habit.goal || !habit.timeFrame) return 0;
-    return habitService.calculateProgress(habit.counts || {}, habit.goal, habit.timeFrame);
+    if (!habit.goal) return 0;
+    
+    const today = new Date();
+    const counts = habit.counts || {};
+    let totalCount = 0;
+    
+    // Calculate total count for all time
+    for (const count of Object.values(counts)) {
+      totalCount += count;
+    }
+    
+    // Calculate progress based on yearly goal
+    return Math.min((totalCount / habit.goal) * 100, 100);
   };
 
   const isHabitCompletedToday = (habit: Habit): boolean => {

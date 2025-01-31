@@ -303,9 +303,21 @@ export const habitService = {
       }
 
       const updateData: Record<string, any> = {};
-      if (updates.goal !== undefined) updateData.goal = updates.goal;
+      if (updates.goal !== undefined) {
+        const numericGoal = Number(updates.goal);
+        if (isNaN(numericGoal)) {
+          throw new Error('Invalid goal value');
+        }
+        updateData.goal = numericGoal;
+      }
       if (updates.timeFrame !== undefined) updateData.timeFrame = updates.timeFrame;
-      if (updates.weeklyFrequency !== undefined) updateData.weeklyFrequency = updates.weeklyFrequency;
+      if (updates.weeklyFrequency !== undefined) {
+        const numericFrequency = Number(updates.weeklyFrequency);
+        if (isNaN(numericFrequency)) {
+          throw new Error('Invalid weekly frequency value');
+        }
+        updateData.weeklyFrequency = numericFrequency;
+      }
       
       await updateDoc(habitRef, updateData);
     } catch (error) {
@@ -315,6 +327,8 @@ export const habitService = {
   },
 
   calculateProgress: (counts: Record<string, number>, goal: number, timeFrame: TimeFrame): number => {
+    if (!goal) return 0;
+    
     const today = new Date();
     let totalCount = 0;
     let periodStart: Date;
@@ -324,7 +338,9 @@ export const habitService = {
         periodStart = new Date(today.setHours(0, 0, 0, 0));
         break;
       case 'week':
-        periodStart = new Date(today.setDate(today.getDate() - today.getDay()));
+        const firstDay = today.getDate() - today.getDay();
+        periodStart = new Date(today.setDate(firstDay));
+        periodStart.setHours(0, 0, 0, 0);
         break;
       case 'month':
         periodStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -341,6 +357,6 @@ export const habitService = {
       }
     }
 
-    return (totalCount / goal) * 100;
+    return Math.min((totalCount / goal) * 100, 100);
   },
 }; 
