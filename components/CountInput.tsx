@@ -24,7 +24,10 @@ interface CountInputProps {
 const screenWidth = Dimensions.get('window').width;
 
 const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
+  // Create a date object in the local timezone
+  const [year, month, day] = dateString.split('-').map(num => parseInt(num, 10));
+  const date = new Date(year, month - 1, day);  // month is 0-based in Date constructor
+  
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayName = days[date.getDay()];
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -43,12 +46,27 @@ export default function CountInput({
   goal,
   date,
 }: CountInputProps) {
-  const [count, setCount] = useState(currentCount.toString());
+  const [count, setCount] = useState(currentCount.toFixed(1));
 
   const handleSubmit = () => {
-    const numCount = parseInt(count) || 0;
-    onSubmit(numCount);
-    setCount('0');
+    const numCount = parseFloat(count) || 0;
+    // Round to 1 decimal place
+    const roundedCount = Math.round(numCount * 10) / 10;
+    onSubmit(roundedCount);
+    setCount('0.0');
+  };
+
+  const handleCountChange = (text: string) => {
+    // Allow only numbers and one decimal point
+    if (/^\d*\.?\d*$/.test(text)) {
+      // If there's a decimal point, limit to one decimal place
+      if (text.includes('.')) {
+        const [whole, decimal] = text.split('.');
+        setCount(`${whole}.${decimal.slice(0, 1)}`);
+      } else {
+        setCount(text);
+      }
+    }
   };
 
   return (
@@ -68,9 +86,9 @@ export default function CountInput({
           )}
           <TextInput
             style={styles.input}
-            keyboardType="number-pad"
+            keyboardType="decimal-pad"
             value={count}
-            onChangeText={setCount}
+            onChangeText={handleCountChange}
             autoFocus
           />
           <View style={styles.buttonContainer}>

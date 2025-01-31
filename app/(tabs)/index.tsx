@@ -59,6 +59,7 @@ export default function HomeScreen() {
     type: HabitType;
     goal?: number;
     timeFrame?: TimeFrame;
+    weeklyFrequency?: number;
   }) => {
     if (!user) return;
 
@@ -68,7 +69,8 @@ export default function HomeScreen() {
         data.name,
         data.type,
         data.goal,
-        data.timeFrame
+        data.timeFrame,
+        data.weeklyFrequency
       );
       await loadHabits();
       setIsAddModalVisible(false);
@@ -114,13 +116,17 @@ export default function HomeScreen() {
         return completionDate >= startOfWeek && completionDate <= today;
       }).length;
 
-      const weeklyGoal = habit.weeklyFrequency ?? 5;
+      const weeklyGoal = habit.weeklyFrequency || 1;
       return `${completionsThisWeek}/${weeklyGoal}x this week`;
     }
     return '';
   };
 
   const handleHabitPress = (habit: Habit) => {
+    router.push(`/habit/${habit.id}`);
+  };
+
+  const handleHabitAction = (habit: Habit) => {
     if (habit.type === 'yesno') {
       toggleHabitCompletion(habit);
     } else {
@@ -205,7 +211,7 @@ export default function HomeScreen() {
                   <View style={styles.habitTitleRow}>
                     <TouchableOpacity 
                       style={styles.habitNameButton}
-                      onPress={() => router.push(`/habit/${habit.id}`)}
+                      onPress={() => handleHabitPress(habit)}
                     >
                       <Text style={[
                         styles.habitName,
@@ -232,7 +238,7 @@ export default function HomeScreen() {
                     </Text>
                     {habit.type === 'yesno' && (
                       <TouchableOpacity
-                        onPress={() => toggleHabitCompletion(habit)}
+                        onPress={() => handleHabitAction(habit)}
                         style={styles.checkbox}
                       >
                         <FontAwesome 
@@ -266,11 +272,14 @@ export default function HomeScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.habitItem}
               >
-                <View style={styles.habitInfo}>
+                <TouchableOpacity 
+                  style={styles.habitInfo}
+                  onPress={() => handleHabitAction(habit)}
+                >
                   <View style={styles.habitTitleRow}>
                     <TouchableOpacity 
                       style={styles.habitNameButton}
-                      onPress={() => router.push(`/habit/${habit.id}`)}
+                      onPress={() => handleHabitPress(habit)}
                     >
                       <Text style={[
                         styles.habitName,
@@ -288,7 +297,7 @@ export default function HomeScreen() {
                       {`${Math.round(progress)}% complete`}
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               </LinearGradient>
             );
           })}

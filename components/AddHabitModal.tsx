@@ -65,42 +65,25 @@ export default function AddHabitModal({ visible, onClose, onSubmit, initialValue
   }, [initialValues]);
 
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter a habit name');
-      return;
-    }
-
-    if (type === 'count' && (!goal || !timeFrame)) {
-      Alert.alert('Error', 'Please enter a goal and time frame for count-based habits');
+    if (!name || !type) {
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     try {
       setIsLoading(true);
-      const habitData = {
-        name: name.trim(),
+      await onSubmit({
+        name,
         type,
-        ...(type === 'count' && {
-          goal: parseInt(goal) || 0,
-          timeFrame
-        }),
-        ...(type === 'yesno' && {
-          weeklyFrequency: parseInt(weeklyFrequency) || 5
-        })
-      };
-
-      await onSubmit(habitData);
-      if (onHabitAdded) {
-        onHabitAdded();
-      }
-      setName('');
-      setType('yesno');
-      setGoal('');
-      setTimeFrame('day');
-      setWeeklyFrequency('5');
+        goal: goal ? parseInt(goal, 10) : undefined,
+        timeFrame,
+        weeklyFrequency: parseInt(weeklyFrequency, 10),
+      });
+      onClose();
+      if (onHabitAdded) onHabitAdded();
     } catch (error) {
-      console.error('Error adding habit:', error);
-      Alert.alert('Error', 'Failed to add habit');
+      console.error('Error submitting habit:', error);
+      Alert.alert('Error', 'Failed to submit habit');
     } finally {
       setIsLoading(false);
     }

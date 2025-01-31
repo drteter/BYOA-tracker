@@ -281,8 +281,13 @@ export default function ProgressTracker({ totalCount, yearlyGoal, startDate, cou
   }, 0);
   const weeklyProgress = (weeklyTotal / weeklyTarget) * 100;
 
-  // Format numbers with commas for thousands
-  const formatNumber = (num: number) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  // Format numbers with commas for thousands and one decimal place
+  const formatNumber = (num: number) => {
+    const roundedNum = Math.round(num * 10) / 10;
+    const [whole, decimal] = roundedNum.toString().split('.');
+    const formattedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return decimal ? `${formattedWhole}.${decimal}` : formattedWhole;
+  };
 
   return (
     <View style={styles.container}>

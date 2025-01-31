@@ -30,7 +30,7 @@ export const habitService = {
     type: HabitType,
     goal?: number,
     timeFrame?: TimeFrame,
-    weeklyFrequency: number = 5
+    weeklyFrequency: number = 1
   ): Promise<void> {
     try {
       const userId = getCurrentUserId();
