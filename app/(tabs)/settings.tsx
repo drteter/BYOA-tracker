@@ -66,6 +66,7 @@ export default function SettingsScreen() {
     type: HabitType;
     goal?: number;
     timeFrame?: TimeFrame;
+    weeklyFrequency?: number;
   }) => {
     if (!selectedHabit) return;
 
@@ -74,6 +75,7 @@ export default function SettingsScreen() {
       await habitService.updateHabitGoals(selectedHabit.id, {
         goal: data.goal,
         timeFrame: data.timeFrame,
+        weeklyFrequency: data.weeklyFrequency
       });
       setIsEditModalVisible(false);
       setSelectedHabit(null);
@@ -145,14 +147,12 @@ export default function SettingsScreen() {
                   >
                     <FontAwesome name="pencil" size={20} color="#007AFF" />
                   </TouchableOpacity>
-                  {habit.type === 'count' && (
-                    <TouchableOpacity 
-                      style={styles.iconButton}
-                      onPress={() => handleEditGoals(habit)}
-                    >
-                      <FontAwesome name="sliders" size={20} color="#007AFF" />
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity 
+                    style={styles.iconButton}
+                    onPress={() => handleEditGoals(habit)}
+                  >
+                    <FontAwesome name="sliders" size={20} color="#007AFF" />
+                  </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.iconButton, styles.deleteButton]}
                     onPress={() => deleteHabit(habit.id)}
@@ -174,12 +174,7 @@ export default function SettingsScreen() {
             setSelectedHabit(null);
           }}
           onSubmit={handleUpdateHabit}
-          initialValues={{
-            name: selectedHabit.name,
-            type: selectedHabit.type,
-            goal: selectedHabit.goal,
-            timeFrame: selectedHabit.timeFrame,
-          }}
+          initialValues={selectedHabit || undefined}
           isEditing={true}
         />
       )}

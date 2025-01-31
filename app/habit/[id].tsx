@@ -196,6 +196,23 @@ export default function HabitDetails() {
     startOfWeek.setDate(today.getDate() - today.getDay()); // Start from Sunday
     startOfWeek.setHours(0, 0, 0, 0);
 
+    if (habit.type === 'yesno') {
+      const completionsThisWeek = habit.completedDates.filter(date => {
+        const completionDate = new Date(date);
+        return completionDate >= startOfWeek && completionDate <= today;
+      }).length;
+
+      // Calculate progress based on weekly frequency goal
+      const weeklyGoal = habit.weeklyFrequency || 7; // Default to 7 if no goal set
+      const progress = Math.min(100, (completionsThisWeek / weeklyGoal) * 100);
+
+      return {
+        thisWeek: completionsThisWeek,
+        timesPerWeek: completionsThisWeek,
+        progress,
+      };
+    }
+
     // Get start of year
     const startOfYear = new Date(today.getFullYear(), 0, 1);
     const weeksSinceStartOfYear = Math.max(1, 

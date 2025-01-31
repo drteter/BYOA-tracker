@@ -7,6 +7,7 @@ export interface Habit {
   type: HabitType;
   goal?: number;
   timeFrame?: TimeFrame;
+  weeklyFrequency?: number; // New field for yes/no habits
   yearlyGoal: number; // Required field for count-type habits
   createdAt: Date;
   currentStreak: number;

@@ -1,31 +1,36 @@
-import { collection, addDoc, getDocs, query, where, updateDoc, doc, Timestamp, getDoc, DocumentData, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, updateDoc, doc, Timestamp, getDoc, DocumentData, deleteDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Habit, HabitType, TimeFrame } from '../types/habit';
+import { v4 as uuidv4 } from 'uuid';
 
 const HABITS_COLLECTION = 'habits';
 
 export const habitService = {
-  async createHabit(
-    name: string,
-    type: HabitType = 'yesno',
-    goal?: number,
-    timeFrame?: TimeFrame
-  ): Promise<string> {
+  async createHabit(data: {
+    name: string;
+    type: HabitType;
+    goal?: number;
+    timeFrame?: TimeFrame;
+    weeklyFrequency?: number;
+  }): Promise<void> {
     try {
-      console.log('Creating habit:', { name, type, goal, timeFrame });
-      const habit = {
-        name,
-        type,
+      const newHabit: Habit = {
+        id: uuidv4(),
+        name: data.name,
+        type: data.type,
         createdAt: new Date(),
-        completedDates: [],
         currentStreak: 0,
+        completedDates: [],
         counts: {},
-        ...(type === 'count' ? { goal, timeFrame } : {}),
+        weeklyFrequency: data.weeklyFrequency || 5,
+        ...(data.type === 'count' && {
+          goal: data.goal,
+          timeFrame: data.timeFrame,
+          yearlyGoal: 100000
+        })
       };
-
-      const docRef = await addDoc(collection(db, HABITS_COLLECTION), habit);
-      console.log('Habit created with ID:', docRef.id);
-      return docRef.id;
+      
+      await setDoc(doc(db, HABITS_COLLECTION, newHabit.id), newHabit);
     } catch (error) {
       console.error('Error creating habit:', error);
       throw error;
@@ -209,7 +214,11 @@ export const habitService = {
 
   async updateHabitGoals(
     habitId: string,
-    updates: { goal?: number; timeFrame?: TimeFrame }
+    updates: { 
+      goal?: number; 
+      timeFrame?: TimeFrame;
+      weeklyFrequency?: number;
+    }
   ): Promise<void> {
     try {
       const habitRef = doc(db, HABITS_COLLECTION, habitId);

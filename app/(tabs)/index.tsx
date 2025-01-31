@@ -94,9 +94,20 @@ export default function HomeScreen() {
 
   const getProgressText = (habit: Habit) => {
     if (habit.type === 'yesno') {
-      return `🔥 ${habit.currentStreak} days`;
+      const today = new Date();
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - today.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const completionsThisWeek = habit.completedDates.filter(date => {
+        const completionDate = new Date(date);
+        return completionDate >= startOfWeek && completionDate <= today;
+      }).length;
+
+      const weeklyGoal = habit.weeklyFrequency ?? 5; // Default to 5 if undefined
+      return `${completionsThisWeek}/${weeklyGoal}x this week`;
     }
-    return '';  // Return empty string for count-type habits
+    return '';
   };
 
   const handleHabitPress = (habit: Habit) => {
