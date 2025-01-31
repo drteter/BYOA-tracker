@@ -6,8 +6,10 @@ import { Habit, HabitType, TimeFrame } from '../../types/habit';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import AddHabitModal from '../../components/AddHabitModal';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function SettingsScreen() {
+  const { user, logout } = useAuth();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
@@ -101,70 +103,96 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Error logging out:', error);
+      Alert.alert('Error', 'Failed to log out. Please try again.');
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Manage Habits</Text>
-      
-      {isLoading && <Text style={styles.loadingText}>Loading...</Text>}
-      
-      <ScrollView style={styles.habitList}>
-        {habits.map((habit) => (
-          <View key={habit.id} style={styles.habitItem}>
-            {editingHabitId === habit.id ? (
-              <View style={styles.editContainer}>
-                <TextInput
-                  style={styles.input}
-                  value={editingName}
-                  onChangeText={setEditingName}
-                  onSubmitEditing={saveHabitName}
-                  autoFocus
-                />
-                <TouchableOpacity 
-                  style={styles.iconButton} 
-                  onPress={saveHabitName}
-                >
-                  <FontAwesome name="check" size={20} color="#4CD964" />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.iconButton}
-                  onPress={() => setEditingHabitId(null)}
-                >
-                  <FontAwesome name="times" size={20} color="#FF3B30" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.habitContent}>
-                <TouchableOpacity 
-                  style={styles.habitName}
-                  onPress={() => router.push(`/habit/${habit.id}`)}
-                >
-                  <Text style={styles.habitNameText}>{habit.name}</Text>
-                </TouchableOpacity>
-                <View style={styles.actions}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Settings</Text>
+        {user && (
+          <Text style={styles.email}>{user.email}</Text>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Manage Habits</Text>
+        
+        {isLoading && <Text style={styles.loadingText}>Loading...</Text>}
+        
+        <ScrollView style={styles.habitList}>
+          {habits.map((habit) => (
+            <View key={habit.id} style={styles.habitItem}>
+              {editingHabitId === habit.id ? (
+                <View style={styles.editContainer}>
+                  <TextInput
+                    style={styles.input}
+                    value={editingName}
+                    onChangeText={setEditingName}
+                    onSubmitEditing={saveHabitName}
+                    autoFocus
+                  />
                   <TouchableOpacity 
-                    style={styles.iconButton}
-                    onPress={() => startEditing(habit)}
+                    style={styles.iconButton} 
+                    onPress={saveHabitName}
                   >
-                    <FontAwesome name="pencil" size={20} color="#007AFF" />
+                    <FontAwesome name="check" size={20} color="#4CD964" />
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={styles.iconButton}
-                    onPress={() => handleEditGoals(habit)}
+                    onPress={() => setEditingHabitId(null)}
                   >
-                    <FontAwesome name="sliders" size={20} color="#007AFF" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.iconButton, styles.deleteButton]}
-                    onPress={() => deleteHabit(habit.id)}
-                  >
-                    <FontAwesome name="trash" size={20} color="#FF3B30" />
+                    <FontAwesome name="times" size={20} color="#FF3B30" />
                   </TouchableOpacity>
                 </View>
-              </View>
-            )}
-          </View>
-        ))}
-      </ScrollView>
+              ) : (
+                <View style={styles.habitContent}>
+                  <TouchableOpacity 
+                    style={styles.habitName}
+                    onPress={() => router.push(`/habit/${habit.id}`)}
+                  >
+                    <Text style={styles.habitNameText}>{habit.name}</Text>
+                  </TouchableOpacity>
+                  <View style={styles.actions}>
+                    <TouchableOpacity 
+                      style={styles.iconButton}
+                      onPress={() => startEditing(habit)}
+                    >
+                      <FontAwesome name="pencil" size={20} color="#007AFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.iconButton}
+                      onPress={() => handleEditGoals(habit)}
+                    >
+                      <FontAwesome name="sliders" size={20} color="#007AFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.iconButton, styles.deleteButton]}
+                      onPress={() => deleteHabit(habit.id)}
+                    >
+                      <FontAwesome name="trash" size={20} color="#FF3B30" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={handleLogout}
+      >
+        <FontAwesome name="sign-out" size={20} color="#fff" style={styles.logoutIcon} />
+        <Text style={styles.logoutText}>Log Out</Text>
+      </TouchableOpacity>
 
       {selectedHabit && (
         <AddHabitModal
@@ -186,14 +214,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  header: {
     paddingTop: 60,
-    paddingBottom: 80,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 8,
+  },
+  email: {
+    fontSize: 16,
+    color: '#666',
+  },
+  section: {
+    flex: 1,
+    paddingBottom: 80,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
   loadingText: {
     textAlign: 'center',
@@ -256,23 +302,29 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     marginRight: 10,
-    fontSize: 18,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 1,
-      },
-      android: {
-        elevation: 1,
-      },
-      web: {
-        boxShadow: '0px 1px 1px rgba(0, 0, 0, 0.1)',
-      },
-    }),
+    fontSize: 16,
   },
   deleteButton: {
-    // Add any necessary styles for the delete button
+    marginLeft: 16,
+  },
+  logoutButton: {
+    position: 'absolute',
+    bottom: 30,
+    left: 20,
+    right: 20,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    padding: 15,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutIcon: {
+    marginRight: 8,
+  },
+  logoutText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
   },
 }); 

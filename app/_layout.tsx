@@ -1,0 +1,87 @@
+import { Stack, SplashScreen, Redirect } from 'expo-router';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { View, ActivityIndicator } from 'react-native';
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
+import { getApps, initializeApp } from 'firebase/app';
+import { firebaseConfig } from '../config/firebase';
+
+// Initialize Firebase for web if not already initialized
+if (Platform.OS === 'web' && getApps().length === 0) {
+  initializeApp(firebaseConfig);
+}
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
+  );
+}
+
+function RootLayoutNav() {
+  const { loading, user } = useAuth();
+
+  useEffect(() => {
+    if (!loading) {
+      SplashScreen.hideAsync();
+    }
+  }, [loading]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  return (
+    <>
+      {!user && <Redirect href="/" />}
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          ...(Platform.OS === 'web' ? {
+            animation: 'none',
+          } : {}),
+        }}
+      >
+        <Stack.Screen 
+          name="index"
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen 
+          name="register"
+          options={{
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen 
+          name="logout-success"
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen 
+          name="(tabs)"
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="habit/[id]"
+          options={{
+            gestureEnabled: true,
+            animation: Platform.OS === 'web' ? 'none' : 'default',
+          }}
+        />
+      </Stack>
+    </>
+  );
+} 

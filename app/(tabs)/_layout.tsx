@@ -1,7 +1,15 @@
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function TabLayout() {
+  const { user } = useAuth();
+
+  // If user is not authenticated, redirect to the login page
+  if (!user) {
+    return <Redirect href="/" />;
+  }
+
   return (
     <Tabs
       screenOptions={{
@@ -18,7 +26,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Dashboard',
           tabBarIcon: ({ color }) => <FontAwesome name="home" size={24} color={color} />,
         }}
       />

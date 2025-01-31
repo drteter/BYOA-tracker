@@ -9,6 +9,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import CountInput from '../../components/CountInput';
 import HabitDashboard from '../../components/HabitDashboard';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '../../contexts/AuthContext';
 
 const calculateProjectedProgress = (counts: Record<string, number>, yearlyGoal: number): number => {
   const today = new Date();
@@ -22,19 +23,17 @@ const calculateProjectedProgress = (counts: Record<string, number>, yearlyGoal: 
 };
 
 export default function HomeScreen() {
+  const { user } = useAuth();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const [isCountModalVisible, setIsCountModalVisible] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadHabits();
-    }, [])
-  );
+  const loadHabits = useCallback(async () => {
+    // Don't try to load habits if there's no user
+    if (!user) return;
 
-  const loadHabits = async () => {
     try {
       setIsLoading(true);
       const loadedHabits = await habitService.getAllHabits();
@@ -45,7 +44,15 @@ export default function HomeScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        loadHabits();
+      }
+    }, [loadHabits, user])
+  );
 
   const handleAddHabit = async (data: {
     name: string;
@@ -53,6 +60,8 @@ export default function HomeScreen() {
     goal?: number;
     timeFrame?: TimeFrame;
   }) => {
+    if (!user) return;
+
     try {
       setIsLoading(true);
       await habitService.createHabit(
@@ -72,7 +81,7 @@ export default function HomeScreen() {
   };
 
   const toggleHabitCompletion = async (habit: Habit) => {
-    if (isLoading) return;
+    if (isLoading || !user) return;
 
     try {
       setIsLoading(true);
@@ -452,6 +461,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
   },
   checkmark: {
     marginLeft: 4,

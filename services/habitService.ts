@@ -1,11 +1,12 @@
 import { collection, addDoc, getDocs, query, where, updateDoc, doc, Timestamp, getDoc, DocumentData, deleteDoc, setDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db, auth } from '../config/firebase';
 import { Habit, HabitType, TimeFrame } from '../types/habit';
 import { v4 as uuidv4 } from 'uuid';
 
 const HABITS_COLLECTION = 'habits';
 
 type HabitData = {
+  userId: string;
   name: string;
   type: HabitType;
   createdAt: Date | Timestamp;
@@ -17,6 +18,12 @@ type HabitData = {
   timeFrame?: TimeFrame;
 };
 
+const getCurrentUserId = () => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('User must be logged in to perform this action');
+  return user.uid;
+};
+
 export const habitService = {
   async createHabit(
     name: string,
@@ -26,8 +33,10 @@ export const habitService = {
     weeklyFrequency: number = 5
   ): Promise<void> {
     try {
+      const userId = getCurrentUserId();
       const id = uuidv4();
       const newHabit: HabitData = {
+        userId,
         name,
         type,
         createdAt: new Date(),
@@ -51,7 +60,13 @@ export const habitService = {
 
   async getAllHabits(): Promise<Habit[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, HABITS_COLLECTION));
+      const userId = getCurrentUserId();
+      const habitsQuery = query(
+        collection(db, HABITS_COLLECTION),
+        where('userId', '==', userId)
+      );
+      
+      const querySnapshot = await getDocs(habitsQuery);
       const habits = querySnapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -78,6 +93,7 @@ export const habitService = {
 
   async toggleHabitCompletion(habitId: string, date: string): Promise<void> {
     try {
+      const userId = getCurrentUserId();
       const habitRef = doc(db, HABITS_COLLECTION, habitId);
       const habitDoc = await getDoc(habitRef);
 
@@ -86,6 +102,10 @@ export const habitService = {
       }
 
       const habitData = habitDoc.data() as DocumentData;
+      if (habitData.userId !== userId) {
+        throw new Error('Unauthorized access to habit');
+      }
+
       const completedDates = new Set(habitData.completedDates || []);
       
       if (completedDates.has(date)) {
@@ -124,6 +144,7 @@ export const habitService = {
 
   async updateCount(habitId: string, date: string, count: number): Promise<void> {
     try {
+      const userId = getCurrentUserId();
       const habitRef = doc(db, HABITS_COLLECTION, habitId);
       const habitDoc = await getDoc(habitRef);
 
@@ -132,6 +153,10 @@ export const habitService = {
       }
 
       const habitData = habitDoc.data() as DocumentData;
+      if (habitData.userId !== userId) {
+        throw new Error('Unauthorized access to habit');
+      }
+
       const counts = { ...(habitData.counts || {}) };
       counts[date] = count;
 
@@ -155,10 +180,20 @@ export const habitService = {
 
   async updateHabitName(habitId: string, newName: string): Promise<void> {
     try {
-      console.log('Updating habit name:', { habitId, newName });
+      const userId = getCurrentUserId();
       const habitRef = doc(db, HABITS_COLLECTION, habitId);
+      const habitDoc = await getDoc(habitRef);
+
+      if (!habitDoc.exists()) {
+        throw new Error('Habit not found');
+      }
+
+      const habitData = habitDoc.data() as DocumentData;
+      if (habitData.userId !== userId) {
+        throw new Error('Unauthorized access to habit');
+      }
+
       await updateDoc(habitRef, { name: newName });
-      console.log('Habit name updated successfully');
     } catch (error) {
       console.error('Error updating habit name:', error);
       throw error;
@@ -166,13 +201,21 @@ export const habitService = {
   },
 
   async deleteHabit(habitId: string): Promise<void> {
-    console.log('deleteHabit called with ID:', habitId);
     try {
+      const userId = getCurrentUserId();
       const habitRef = doc(db, HABITS_COLLECTION, habitId);
-      console.log('Created reference to document:', habitId);
-      
+      const habitDoc = await getDoc(habitRef);
+
+      if (!habitDoc.exists()) {
+        throw new Error('Habit not found');
+      }
+
+      const habitData = habitDoc.data() as DocumentData;
+      if (habitData.userId !== userId) {
+        throw new Error('Unauthorized access to habit');
+      }
+
       await deleteDoc(habitRef);
-      console.log('Document successfully deleted:', habitId);
     } catch (error) {
       console.error('Error in deleteHabit:', error);
       throw error;
@@ -186,6 +229,7 @@ export const habitService = {
     longestStreak: number;
   }> {
     try {
+      const userId = getCurrentUserId();
       const habitRef = doc(db, HABITS_COLLECTION, habitId);
       const habitDoc = await getDoc(habitRef);
       
@@ -194,6 +238,10 @@ export const habitService = {
       }
 
       const habit = habitDoc.data() as DocumentData;
+      if (habit.userId !== userId) {
+        throw new Error('Unauthorized access to habit');
+      }
+
       const completedDates = habit.completedDates || [];
       const createdDate = habit.createdAt?.toDate 
         ? habit.createdAt.toDate()
@@ -241,9 +289,20 @@ export const habitService = {
     }
   ): Promise<void> {
     try {
+      const userId = getCurrentUserId();
       const habitRef = doc(db, HABITS_COLLECTION, habitId);
+      const habitDoc = await getDoc(habitRef);
+
+      if (!habitDoc.exists()) {
+        throw new Error('Habit not found');
+      }
+
+      const habitData = habitDoc.data() as DocumentData;
+      if (habitData.userId !== userId) {
+        throw new Error('Unauthorized access to habit');
+      }
+
       const updateData: Record<string, any> = {};
-      
       if (updates.goal !== undefined) updateData.goal = updates.goal;
       if (updates.timeFrame !== undefined) updateData.timeFrame = updates.timeFrame;
       if (updates.weeklyFrequency !== undefined) updateData.weeklyFrequency = updates.weeklyFrequency;
