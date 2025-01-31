@@ -5,6 +5,18 @@ import { v4 as uuidv4 } from 'uuid';
 
 const HABITS_COLLECTION = 'habits';
 
+type HabitData = {
+  name: string;
+  type: HabitType;
+  createdAt: Date | Timestamp;
+  currentStreak: number;
+  completedDates: string[];
+  counts: Record<string, number>;
+  weeklyFrequency: number;
+  goal?: number;
+  timeFrame?: TimeFrame;
+};
+
 export const habitService = {
   async createHabit(
     name: string,
@@ -14,8 +26,8 @@ export const habitService = {
     weeklyFrequency: number = 5
   ): Promise<void> {
     try {
-      const newHabit: Habit = {
-        id: uuidv4(),
+      const id = uuidv4();
+      const newHabit: HabitData = {
         name,
         type,
         createdAt: new Date(),
@@ -23,17 +35,13 @@ export const habitService = {
         completedDates: [],
         counts: {},
         weeklyFrequency,
-        ...(type === 'count' && {
-          goal,
-          timeFrame,
-          yearlyGoal: 100000
-        })
+        ...(type === 'count' ? { goal, timeFrame } : {})
       };
       
-      const habitRef = doc(db, HABITS_COLLECTION, newHabit.id);
+      const habitRef = doc(db, HABITS_COLLECTION, id);
       await setDoc(habitRef, {
         ...newHabit,
-        createdAt: Timestamp.fromDate(newHabit.createdAt),
+        createdAt: Timestamp.fromDate(newHabit.createdAt as Date),
       });
     } catch (error) {
       console.error('Error creating habit:', error);
@@ -48,12 +56,17 @@ export const habitService = {
         const data = doc.data();
         return {
           id: doc.id,
-          ...data,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-          counts: data.counts || {},
+          name: data.name,
           type: data.type || 'yesno',
-          goal: data.type === 'count' ? (data.goal || data.yearlyGoal || 0) : undefined,
-          timeFrame: data.type === 'count' ? (data.timeFrame || 'year') : undefined,
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
+          currentStreak: data.currentStreak || 0,
+          completedDates: data.completedDates || [],
+          counts: data.counts || {},
+          weeklyFrequency: data.weeklyFrequency || 5,
+          ...(data.type === 'count' ? {
+            goal: data.goal || 0,
+            timeFrame: data.timeFrame || 'year'
+          } : {})
         } as Habit;
       });
       return habits;
@@ -87,9 +100,10 @@ export const habitService = {
       const today = new Date().toISOString().split('T')[0];
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
-      if (sortedDates.includes(today) || sortedDates.includes(yesterday)) {
+      if (sortedDates.length > 0 && (sortedDates.includes(today) || sortedDates.includes(yesterday))) {
         streak = 1;
-        let checkDate = new Date(sortedDates[sortedDates.length - 1] as string);
+        const lastCompletedDate = sortedDates[sortedDates.length - 1] as string;
+        let checkDate = new Date(lastCompletedDate);
         checkDate.setDate(checkDate.getDate() - 1);
 
         while (sortedDates.includes(checkDate.toISOString().split('T')[0])) {
@@ -181,11 +195,13 @@ export const habitService = {
 
       const habit = habitDoc.data() as DocumentData;
       const completedDates = habit.completedDates || [];
-      const createdAt = habit.createdAt.toDate();
+      const createdDate = habit.createdAt?.toDate 
+        ? habit.createdAt.toDate()
+        : new Date(habit.createdAt);
       
       // Calculate weeks since creation
       const now = new Date();
-      const weeksSinceCreation = Math.max(1, Math.ceil((now.getTime() - createdAt.getTime()) / (7 * 24 * 60 * 60 * 1000)));
+      const weeksSinceCreation = Math.max(1, Math.ceil((now.getTime() - createdDate.getTime()) / (7 * 24 * 60 * 60 * 1000)));
       
       // Calculate longest streak
       let longestStreak = 0;
@@ -228,7 +244,6 @@ export const habitService = {
       const habitRef = doc(db, HABITS_COLLECTION, habitId);
       const updateData: Record<string, any> = {};
       
-      // Only include defined values in the update
       if (updates.goal !== undefined) updateData.goal = updates.goal;
       if (updates.timeFrame !== undefined) updateData.timeFrame = updates.timeFrame;
       if (updates.weeklyFrequency !== undefined) updateData.weeklyFrequency = updates.weeklyFrequency;

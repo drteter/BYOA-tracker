@@ -189,11 +189,16 @@ export default function HabitDetails() {
   };
 
   const calculateWeeklyStats = () => {
-    if (!habit) return { thisWeek: 0, timesPerWeek: 0, progress: 0 };
+    if (!habit) return { 
+      thisWeek: 0, 
+      timesPerWeek: 0, 
+      progress: 0,
+      isGoalAchieved: false
+    };
 
     const today = new Date();
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay()); // Start from Sunday
+    startOfWeek.setDate(today.getDate() - today.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
     if (habit.type === 'yesno') {
@@ -202,83 +207,87 @@ export default function HabitDetails() {
         return completionDate >= startOfWeek && completionDate <= today;
       }).length;
 
-      // Calculate progress based on weekly frequency goal
-      const weeklyGoal = habit.weeklyFrequency || 5; // Default to 5 if no goal set
+      const weeklyGoal = habit.weeklyFrequency || 5;
       const progress = Math.min(100, (completionsThisWeek / weeklyGoal) * 100);
       const isGoalAchieved = completionsThisWeek >= weeklyGoal;
 
       return {
         thisWeek: completionsThisWeek,
-        timesPerWeek: completionsThisWeek,
+        timesPerWeek: weeklyGoal,
         progress,
         isGoalAchieved
       };
     }
 
-    // Get start of year
+    // For count-type habits
+    const thisWeekCount = Object.entries(habit.counts || {})
+      .filter(([date]) => {
+        const countDate = new Date(date);
+        return countDate >= startOfWeek && countDate <= today;
+      })
+      .reduce((sum, [_, count]) => sum + count, 0);
+
+    // Calculate annual progress
     const startOfYear = new Date(today.getFullYear(), 0, 1);
-    const weeksSinceStartOfYear = Math.max(1, 
-      Math.ceil((today.getTime() - startOfYear.getTime()) / (7 * 24 * 60 * 60 * 1000))
+    
+    // Count number of unique days with entries, not the sum of counts
+    const daysCompletedThisYear = Object.entries(habit.counts || {})
+      .filter(([date]) => {
+        const countDate = new Date(date);
+        return countDate >= startOfYear && countDate <= today;
+      })
+      .length;
+
+    // Calculate weeks since start of year (add 1 to avoid division by zero)
+    const millisecondsPerWeek = 7 * 24 * 60 * 60 * 1000;
+    const weeksSinceStartOfYear = Math.max(
+      1,
+      Math.ceil((today.getTime() - startOfYear.getTime()) / millisecondsPerWeek)
     );
 
-    if (habit.type === 'count') {
-      // Calculate total count for count-type habits
-      const totalCount = Object.values(habit.counts).reduce((sum, count) => sum + count, 0);
-      
-      // Calculate this week's count
-      const thisWeekCount = Object.entries(habit.counts)
-        .filter(([date]) => {
-          const countDate = new Date(date);
-          return countDate >= startOfWeek && countDate <= today;
-        })
-        .reduce((sum, [_, count]) => sum + count, 0);
+    // Calculate average days per week (round to 1 decimal place)
+    const averageTimesPerWeek = +(daysCompletedThisYear / weeksSinceStartOfYear).toFixed(1);
 
-      // Calculate times per week (number of days with nonzero counts this year / weeks since start of year)
-      const daysWithCountsThisYear = Object.entries(habit.counts)
-        .filter(([date, count]) => {
-          const countDate = new Date(date);
-          return count > 0 && countDate >= startOfYear && countDate <= today;
-        }).length;
+    // Calculate weekly target and check if goal is achieved
+    const weeklyTarget = habit.goal ? Math.round(habit.goal / 52) : 0;
+    const isGoalAchieved = weeklyTarget > 0 ? thisWeekCount >= weeklyTarget : false;
 
-      const timesPerWeek = Number((daysWithCountsThisYear / weeksSinceStartOfYear).toFixed(1));
-
-      // Calculate progress based on total count and goal
-      let progress = 0;
-      if (habit.goal) {
-        progress = Math.min(100, (totalCount / habit.goal) * 100);
-      }
-
-      return {
-        thisWeek: thisWeekCount,
-        timesPerWeek,
-        progress,
-      };
-    } else {
-      // For yes/no habits, keep existing logic
-      const completionsThisWeek = habit.completedDates.filter(date => {
-        const completionDate = new Date(date);
-        return completionDate >= startOfWeek && completionDate <= today;
-      }).length;
-
-      // Calculate times per week for yes/no habits since start of year
-      const completionsThisYear = habit.completedDates.filter(date => {
-        const completionDate = new Date(date);
-        return completionDate >= startOfYear && completionDate <= today;
-      }).length;
-
-      const timesPerWeek = Number((completionsThisYear / weeksSinceStartOfYear).toFixed(1));
-
-      return {
-        thisWeek: completionsThisWeek,
-        timesPerWeek,
-        progress: (completionsThisWeek / 7) * 100,
-      };
-    }
+    return {
+      thisWeek: thisWeekCount,
+      timesPerWeek: averageTimesPerWeek,
+      progress: Math.min(100, (thisWeekCount / weeklyTarget) * 100),
+      isGoalAchieved
+    };
   };
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
     setIsCountModalVisible(true);
+  };
+
+  const getHabitStats = (habit: Habit) => {
+    if (!habit) return null;
+
+    // Handle different date formats
+    const createdDate = typeof habit.createdAt === 'object' && habit.createdAt.toDate 
+      ? habit.createdAt.toDate() 
+      : new Date(habit.createdAt);
+
+    const today = new Date();
+    const daysSinceCreation = Math.floor(
+      (today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    // Rest of the function remains the same
+    const totalCompletions = habit.type === 'yesno'
+      ? habit.completedDates.length
+      : Object.values(habit.counts || {}).reduce((sum, count) => sum + count, 0);
+
+    return {
+      daysSinceCreation,
+      totalCompletions,
+      averagePerWeek: +(totalCompletions / (daysSinceCreation / 7)).toFixed(1)
+    };
   };
 
   if (isLoading) {

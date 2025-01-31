@@ -7,7 +7,6 @@ import { router, useFocusEffect } from 'expo-router';
 import AddHabitModal from '../../components/AddHabitModal';
 import { FontAwesome } from '@expo/vector-icons';
 import CountInput from '../../components/CountInput';
-import GoalAchievedAnimation from '../../components/GoalAchievedAnimation';
 import HabitDashboard from '../../components/HabitDashboard';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -82,7 +81,6 @@ export default function HomeScreen() {
       if (habit.type === 'yesno') {
         await habitService.toggleHabitCompletion(habit.id, today);
       } else {
-        // For count-type habits, we'll navigate to the detail screen
         router.push(`/habit/${habit.id}`);
       }
       
@@ -107,7 +105,7 @@ export default function HomeScreen() {
         return completionDate >= startOfWeek && completionDate <= today;
       }).length;
 
-      const weeklyGoal = habit.weeklyFrequency ?? 5; // Default to 5 if undefined
+      const weeklyGoal = habit.weeklyFrequency ?? 5;
       return `${completionsThisWeek}/${weeklyGoal}x this week`;
     }
     return '';
@@ -143,6 +141,11 @@ export default function HomeScreen() {
   const calculateProgress = (habit: Habit): number => {
     if (!habit.goal || !habit.timeFrame) return 0;
     return habitService.calculateProgress(habit.counts || {}, habit.goal, habit.timeFrame);
+  };
+
+  const isHabitCompletedToday = (habit: Habit): boolean => {
+    const today = new Date().toISOString().split('T')[0];
+    return habit.completedDates.includes(today);
   };
 
   return (
@@ -211,33 +214,27 @@ export default function HomeScreen() {
                       />
                     )}
                   </View>
-                  <TouchableOpacity 
-                    style={styles.progressArea}
-                    onPress={() => {
-                      if (habit.type === 'count') {
-                        setSelectedHabit(habit);
-                        setIsCountModalVisible(true);
-                      }
-                    }}
-                  >
+                  <View style={styles.rightSection}>
                     <Text style={[
                       styles.streakText,
                       isGoalAchieved && { color: '#FFFFFF' }
                     ]}>
                       {getProgressText(habit)}
                     </Text>
-                  </TouchableOpacity>
+                    {habit.type === 'yesno' && (
+                      <TouchableOpacity
+                        onPress={() => toggleHabitCompletion(habit)}
+                        style={styles.checkbox}
+                      >
+                        <FontAwesome 
+                          name={isHabitCompletedToday(habit) ? "check" : "circle-o"}
+                          size={24} 
+                          color={isGoalAchieved ? "#FFFFFF" : (isHabitCompletedToday(habit) ? "#34C759" : "#000000")}
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
-                
-                {habit.type === 'yesno' && (
-                  <TouchableOpacity
-                    onPress={() => toggleHabitCompletion(habit)}
-                    style={[
-                      styles.checkbox,
-                      habit.completedToday && styles.checked
-                    ]}
-                  />
-                )}
               </LinearGradient>
             );
           })}
@@ -247,17 +244,8 @@ export default function HomeScreen() {
         {habits
           .filter(habit => habit.type === 'count')
           .map(habit => {
-            const today = new Date();
-            const startOfWeek = new Date(today);
-            startOfWeek.setDate(today.getDate() - today.getDay());
-            startOfWeek.setHours(0, 0, 0, 0);
-
-            const completionsThisWeek = habit.completedDates.filter(date => {
-              const completionDate = new Date(date);
-              return completionDate >= startOfWeek && completionDate <= today;
-            }).length;
-            
-            const isGoalAchieved = completionsThisWeek >= (habit.weeklyFrequency ?? 5);
+            const progress = calculateProgress(habit);
+            const isGoalAchieved = progress >= 100;
 
             return (
               <LinearGradient
@@ -282,42 +270,16 @@ export default function HomeScreen() {
                         {habit.name}
                       </Text>
                     </TouchableOpacity>
-                    {isGoalAchieved && (
-                      <FontAwesome 
-                        name="check-circle" 
-                        size={20} 
-                        color="#FFFFFF" 
-                        style={styles.checkmark}
-                      />
-                    )}
                   </View>
-                  <TouchableOpacity 
-                    style={styles.progressArea}
-                    onPress={() => {
-                      if (habit.type === 'count') {
-                        setSelectedHabit(habit);
-                        setIsCountModalVisible(true);
-                      }
-                    }}
-                  >
+                  <View style={styles.rightSection}>
                     <Text style={[
                       styles.streakText,
                       isGoalAchieved && { color: '#FFFFFF' }
                     ]}>
-                      {getProgressText(habit)}
+                      {`${Math.round(progress)}% complete`}
                     </Text>
-                  </TouchableOpacity>
+                  </View>
                 </View>
-                
-                {habit.type === 'yesno' && (
-                  <TouchableOpacity
-                    onPress={() => toggleHabitCompletion(habit)}
-                    style={[
-                      styles.checkbox,
-                      habit.completedToday && styles.checked
-                    ]}
-                  />
-                )}
               </LinearGradient>
             );
           })}
@@ -340,8 +302,11 @@ export default function HomeScreen() {
 
       {selectedHabit && (
         <CountInput
-          isVisible={isCountModalVisible}
-          onClose={() => setIsCountModalVisible(false)}
+          visible={isCountModalVisible}
+          onClose={() => {
+            setIsCountModalVisible(false);
+            setSelectedHabit(null);
+          }}
           onSubmit={handleUpdateCount}
           currentCount={selectedHabit.counts[new Date().toISOString().split('T')[0]] || 0}
           habitName={selectedHabit.name}
@@ -383,6 +348,10 @@ const styles = StyleSheet.create({
   },
   habitInfo: {
     flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
   },
   habitName: {
     fontSize: 18,
@@ -397,15 +366,17 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#007AFF',
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginLeft: 'auto',
   },
-  checked: {
-    backgroundColor: '#007AFF',
+  checkbox: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   floatingButton: {
     position: 'absolute',

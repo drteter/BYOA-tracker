@@ -13,6 +13,13 @@ interface HabitDashboardProps {
   isGoalAchieved: boolean;
 }
 
+const formatCreatedDate = (date: any) => {
+  if (typeof date === 'object' && date.toDate) {
+    return date.toDate().toLocaleDateString();
+  }
+  return new Date(date).toLocaleDateString();
+};
+
 export default function HabitDashboard({ 
   name, 
   createdAt, 
@@ -62,7 +69,7 @@ export default function HabitDashboard({
           styles.subtitle,
           isGoalAchieved && { color: '#FFFFFF' }
         ]}>
-          Created {createdAt.toLocaleDateString()}
+          Created {formatCreatedDate(createdAt)}
         </Text>
 
         <View style={styles.statsContainer}>
