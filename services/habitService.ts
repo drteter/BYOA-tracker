@@ -5,30 +5,26 @@ import { Habit, HabitType, TimeFrame } from '../types/habit';
 const HABITS_COLLECTION = 'habits';
 
 export const habitService = {
-  async createHabit(data: {
-    name: string;
-    type: HabitType;
-    goal?: number;
-    yearlyGoal?: number;
-    timeFrame?: TimeFrame;
-  }): Promise<string> {
+  async createHabit(
+    name: string,
+    type: HabitType = 'yesno',
+    goal?: number,
+    timeFrame?: TimeFrame
+  ): Promise<string> {
     try {
-      const habit: Omit<Habit, 'id'> = {
-        name: data.name,
-        type: data.type,
-        goal: data.goal,
-        timeFrame: data.timeFrame,
-        yearlyGoal: data.type === 'count' ? (data.yearlyGoal || data.goal || 100000) : 0,
+      console.log('Creating habit:', { name, type, goal, timeFrame });
+      const habit = {
+        name,
+        type,
         createdAt: new Date(),
-        currentStreak: 0,
         completedDates: [],
+        currentStreak: 0,
         counts: {},
+        ...(type === 'count' ? { goal, timeFrame } : {}),
       };
 
-      const docRef = await addDoc(collection(db, HABITS_COLLECTION), {
-        ...habit,
-        createdAt: Timestamp.fromDate(habit.createdAt),
-      });
+      const docRef = await addDoc(collection(db, HABITS_COLLECTION), habit);
+      console.log('Habit created with ID:', docRef.id);
       return docRef.id;
     } catch (error) {
       console.error('Error creating habit:', error);
@@ -46,8 +42,9 @@ export const habitService = {
           ...data,
           createdAt: data.createdAt?.toDate() || new Date(),
           counts: data.counts || {},
-          type: data.type || 'yesno', // Default to yesno for backward compatibility
-          yearlyGoal: data.type === 'count' ? (data.yearlyGoal || 100000) : 0, // Ensure yearlyGoal is set for count habits
+          type: data.type || 'yesno',
+          goal: data.type === 'count' ? (data.goal || data.yearlyGoal || 0) : undefined,
+          timeFrame: data.type === 'count' ? (data.timeFrame || 'year') : undefined,
         } as Habit;
       });
       return habits;
@@ -210,23 +207,46 @@ export const habitService = {
     }
   },
 
-  async updateHabitGoals(habitId: string, updates: { goal?: number; yearlyGoal?: number; timeFrame?: TimeFrame }): Promise<void> {
+  async updateHabitGoals(
+    habitId: string,
+    updates: { goal?: number; timeFrame?: TimeFrame }
+  ): Promise<void> {
     try {
       const habitRef = doc(db, HABITS_COLLECTION, habitId);
-      const habitDoc = await getDoc(habitRef);
-
-      if (!habitDoc.exists()) {
-        throw new Error('Habit not found');
-      }
-
-      await updateDoc(habitRef, {
-        ...(updates.goal !== undefined && { goal: updates.goal }),
-        ...(updates.yearlyGoal !== undefined && { yearlyGoal: updates.yearlyGoal }),
-        ...(updates.timeFrame !== undefined && { timeFrame: updates.timeFrame }),
-      });
+      await updateDoc(habitRef, updates);
     } catch (error) {
       console.error('Error updating habit goals:', error);
       throw error;
     }
+  },
+
+  calculateProgress: (counts: Record<string, number>, goal: number, timeFrame: TimeFrame): number => {
+    const today = new Date();
+    let totalCount = 0;
+    let periodStart: Date;
+
+    switch (timeFrame) {
+      case 'day':
+        periodStart = new Date(today.setHours(0, 0, 0, 0));
+        break;
+      case 'week':
+        periodStart = new Date(today.setDate(today.getDate() - today.getDay()));
+        break;
+      case 'month':
+        periodStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        break;
+      case 'year':
+        periodStart = new Date(today.getFullYear(), 0, 1);
+        break;
+    }
+
+    for (const [date, count] of Object.entries(counts)) {
+      const countDate = new Date(date);
+      if (countDate >= periodStart && countDate <= today) {
+        totalCount += count;
+      }
+    }
+
+    return (totalCount / goal) * 100;
   },
 }; 

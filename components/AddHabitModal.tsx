@@ -8,8 +8,13 @@ import {
   StyleSheet,
   Platform,
   ScrollView,
+  Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { HabitType, TimeFrame } from '../types/habit';
+import { habitService } from '../services/habitService';
 
 interface AddHabitModalProps {
   visible: boolean;
@@ -18,54 +23,67 @@ interface AddHabitModalProps {
     name: string;
     type: HabitType;
     goal?: number;
-    yearlyGoal?: number;
     timeFrame?: TimeFrame;
   }) => void;
   initialValues?: {
     name?: string;
     type?: HabitType;
     goal?: number;
-    yearlyGoal?: number;
     timeFrame?: TimeFrame;
   };
   isEditing?: boolean;
+  onHabitAdded?: () => void;
 }
 
-export default function AddHabitModal({ visible, onClose, onSubmit, initialValues, isEditing }: AddHabitModalProps) {
+export default function AddHabitModal({ visible, onClose, onSubmit, initialValues, isEditing, onHabitAdded }: AddHabitModalProps) {
   const [name, setName] = useState(initialValues?.name || '');
   const [type, setType] = useState<HabitType>(initialValues?.type || 'yesno');
   const [goal, setGoal] = useState(initialValues?.goal?.toString() || '');
-  const [yearlyGoal, setYearlyGoal] = useState(initialValues?.yearlyGoal?.toString() || '');
-  const [timeFrame, setTimeFrame] = useState<TimeFrame | undefined>(initialValues?.timeFrame);
+  const [timeFrame, setTimeFrame] = useState<TimeFrame>(initialValues?.timeFrame || 'year');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setName(initialValues?.name || '');
       setType(initialValues?.type || 'yesno');
       setGoal(initialValues?.goal?.toString() || '');
-      setYearlyGoal(initialValues?.yearlyGoal?.toString() || '');
-      setTimeFrame(initialValues?.timeFrame);
+      setTimeFrame(initialValues?.timeFrame || 'year');
     }
   }, [visible, initialValues]);
 
-  const handleSubmit = () => {
-    if (!name.trim()) return;
-
-    onSubmit({
-      name: name.trim(),
-      type,
-      ...(goal && { goal: parseInt(goal, 10) }),
-      ...(yearlyGoal && { yearlyGoal: parseInt(yearlyGoal, 10) }),
-      ...(timeFrame && { timeFrame }),
-    });
-
-    if (!isEditing) {
-      setName('');
-      setType('yesno');
-      setGoal('');
-      setYearlyGoal('');
-      setTimeFrame(undefined);
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      Alert.alert('Error', 'Please enter a habit name');
+      return;
     }
+
+    if (type === 'count' && (!goal || !timeFrame)) {
+      Alert.alert('Error', 'Please enter a goal and time frame for count-based habits');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await habitService.createHabit(
+        name.trim(),
+        type,
+        type === 'count' ? Number(goal) : undefined,
+        type === 'count' ? timeFrame : undefined
+      );
+      onClose();
+      if (onHabitAdded) {
+        onHabitAdded();
+      }
+    } catch (error) {
+      console.error('Error adding habit:', error);
+      Alert.alert('Error', 'Failed to add habit');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
   };
 
   return (
@@ -75,97 +93,104 @@ export default function AddHabitModal({ visible, onClose, onSubmit, initialValue
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <ScrollView>
-            <Text style={styles.title}>{isEditing ? 'Edit Habit' : 'Add New Habit'}</Text>
+      <TouchableWithoutFeedback onPress={dismissKeyboard}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              <Text style={styles.title}>{isEditing ? 'Edit Habit' : 'Add New Habit'}</Text>
 
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter habit name"
-              autoFocus
-            />
+              <Text style={styles.label}>Name</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter habit name"
+                placeholderTextColor="#999"
+                returnKeyType="done"
+                onSubmitEditing={dismissKeyboard}
+              />
 
-            <Text style={styles.label}>Type</Text>
-            <View style={styles.typeContainer}>
-              <TouchableOpacity
-                style={[styles.typeButton, type === 'yesno' && styles.selectedType]}
-                onPress={() => setType('yesno')}
-              >
-                <Text style={[styles.typeText, type === 'yesno' && styles.selectedTypeText]}>
-                  Yes/No
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.typeButton, type === 'count' && styles.selectedType]}
-                onPress={() => setType('count')}
-              >
-                <Text style={[styles.typeText, type === 'count' && styles.selectedTypeText]}>
-                  Count
-                </Text>
-              </TouchableOpacity>
-            </View>
+              <Text style={styles.label}>Type</Text>
+              <View style={styles.typeContainer}>
+                <TouchableOpacity
+                  style={[styles.typeButton, type === 'yesno' && styles.selectedType]}
+                  onPress={() => setType('yesno')}
+                >
+                  <Text style={[styles.typeText, type === 'yesno' && styles.selectedTypeText]}>
+                    Yes/No
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.typeButton, type === 'count' && styles.selectedType]}
+                  onPress={() => setType('count')}
+                >
+                  <Text style={[styles.typeText, type === 'count' && styles.selectedTypeText]}>
+                    Count
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-            {type === 'count' && (
-              <>
-                <Text style={styles.label}>Goal per Time Frame</Text>
-                <TextInput
-                  style={styles.input}
-                  value={goal}
-                  onChangeText={setGoal}
-                  placeholder="Enter goal amount"
-                  keyboardType="numeric"
-                />
+              {type === 'count' && (
+                <>
+                  <Text style={styles.label}>Goal</Text>
+                  <View style={styles.goalContainer}>
+                    <TextInput
+                      style={[styles.input, styles.goalInput]}
+                      value={goal}
+                      onChangeText={setGoal}
+                      placeholder="Enter goal"
+                      keyboardType="numeric"
+                      placeholderTextColor="#999"
+                      returnKeyType="done"
+                      onSubmitEditing={dismissKeyboard}
+                    />
+                    
+                    <View style={styles.timeFrameContainer}>
+                      {(['day', 'week', 'month', 'year'] as TimeFrame[]).map((tf) => (
+                        <TouchableOpacity
+                          key={tf}
+                          style={[styles.timeFrameButton, timeFrame === tf && styles.selectedTimeFrame]}
+                          onPress={() => setTimeFrame(tf)}
+                        >
+                          <Text style={[styles.timeFrameText, timeFrame === tf && styles.selectedTimeFrameText]}>
+                            {tf.charAt(0).toUpperCase() + tf.slice(1)}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </>
+              )}
 
-                <Text style={styles.label}>Yearly Goal</Text>
-                <TextInput
-                  style={styles.input}
-                  value={yearlyGoal}
-                  onChangeText={setYearlyGoal}
-                  placeholder="Enter yearly goal"
-                  keyboardType="numeric"
-                />
-
-                <Text style={styles.label}>Time Frame</Text>
-                <View style={styles.timeFrameContainer}>
-                  {(['day', 'week', 'month', 'year'] as TimeFrame[]).map((tf) => (
-                    <TouchableOpacity
-                      key={tf}
-                      style={[styles.timeFrameButton, timeFrame === tf && styles.selectedTimeFrame]}
-                      onPress={() => setTimeFrame(tf)}
-                    >
-                      <Text
-                        style={[
-                          styles.timeFrameText,
-                          timeFrame === tf && styles.selectedTimeFrameText,
-                        ]}
-                      >
-                        {tf.charAt(0).toUpperCase() + tf.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </>
-            )}
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.addButton, !name.trim() && styles.disabledButton]}
-                onPress={handleSubmit}
-                disabled={!name.trim()}
-              >
-                <Text style={styles.addButtonText}>{isEditing ? 'Save' : 'Add'}</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      </View>
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={onClose}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.saveButton]}
+                  onPress={handleSubmit}
+                  disabled={isLoading}
+                >
+                  <Text style={[styles.buttonText, styles.saveButtonText]}>
+                    {isLoading ? 'Saving...' : 'Save'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
@@ -178,15 +203,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
     borderRadius: 20,
     padding: 20,
-    width: '50%',
+    width: '90%',
     maxWidth: 400,
-    maxHeight: '90%',
+    maxHeight: '80%',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
@@ -199,23 +228,24 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: '#ddd',
     borderRadius: 10,
     padding: 12,
-    marginBottom: 20,
+    marginBottom: 16,
     fontSize: 16,
+    backgroundColor: '#f8f8f8',
   },
   typeContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 16,
+    gap: 10,
   },
   typeButton: {
     flex: 1,
     padding: 12,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    marginHorizontal: 5,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
     alignItems: 'center',
   },
   selectedType: {
@@ -227,22 +257,27 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   selectedTypeText: {
-    color: '#fff',
+    color: 'white',
+  },
+  goalContainer: {
+    marginBottom: 16,
+  },
+  goalInput: {
+    marginBottom: 8,
   },
   timeFrameContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 20,
     gap: 8,
   },
   timeFrameButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    flex: 1,
+    minWidth: '22%',
+    padding: 10,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
+    borderColor: '#ddd',
+    alignItems: 'center',
   },
   selectedTimeFrame: {
     backgroundColor: '#007AFF',
@@ -253,41 +288,34 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   selectedTimeFrameText: {
-    color: '#fff',
+    color: 'white',
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 10,
     marginTop: 20,
   },
+  button: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
   cancelButton: {
-    flex: 1,
-    padding: 15,
-    marginRight: 10,
-    borderRadius: 10,
+    backgroundColor: '#f8f8f8',
     borderWidth: 1,
-    borderColor: '#E5E5EA',
-    alignItems: 'center',
+    borderColor: '#ddd',
   },
-  cancelButtonText: {
-    color: '#333',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  addButton: {
-    flex: 1,
-    padding: 15,
-    marginLeft: 10,
-    borderRadius: 10,
+  saveButton: {
     backgroundColor: '#007AFF',
-    alignItems: 'center',
   },
-  disabledButton: {
-    backgroundColor: '#B4B4B4',
-  },
-  addButtonText: {
-    color: '#fff',
+  buttonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#333',
+  },
+  saveButtonText: {
+    color: 'white',
   },
 }); 

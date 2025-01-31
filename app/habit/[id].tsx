@@ -257,6 +257,11 @@ export default function HabitDetails() {
     }
   };
 
+  const handleDateSelect = (date: string) => {
+    setSelectedDate(date);
+    setIsCountModalVisible(true);
+  };
+
   if (isLoading) {
     return (
       <View style={styles.container}>
@@ -327,7 +332,7 @@ export default function HabitDetails() {
           currentCount={selectedDate ? (habit.counts[selectedDate] || 0) : 0}
           habitName={habit.name}
           goal={habit.goal}
-          date={new Date(selectedDate)}
+          date={selectedDate}
         />
       )}
     </View>

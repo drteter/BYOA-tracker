@@ -8,6 +8,17 @@ import AddHabitModal from '../../components/AddHabitModal';
 import { FontAwesome } from '@expo/vector-icons';
 import CountInput from '../../components/CountInput';
 
+const calculateProjectedProgress = (counts: Record<string, number>, yearlyGoal: number): number => {
+  const today = new Date();
+  const startOfYear = new Date(today.getFullYear(), 0, 1);
+  const dayOfYear = Math.ceil((today.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+  const daysInYear = 365;
+  
+  const totalCount = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  const projectedTotal = Math.round((totalCount / dayOfYear) * daysInYear);
+  return (projectedTotal / yearlyGoal) * 100;
+};
+
 export default function HomeScreen() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -138,7 +149,17 @@ export default function HomeScreen() {
                 onPress={() => router.push(`/habit/${habit.id}`)}
                 style={styles.habitNameButton}
               >
-                <Text style={styles.habitName}>{habit.name}</Text>
+                <View style={styles.habitNameContainer}>
+                  <Text style={styles.habitName}>{habit.name}</Text>
+                  {habit.type === 'count' && (
+                    <Text style={[
+                      styles.trackingStatus,
+                      { color: calculateProjectedProgress(habit.counts || {}, habit.yearlyGoal || 100000) >= 90 ? '#4CD964' : '#FF3B30' }
+                    ]}>
+                      {calculateProjectedProgress(habit.counts || {}, habit.yearlyGoal || 100000) >= 90 ? 'ON TRACK' : 'OFF TRACK'}
+                    </Text>
+                  )}
+                </View>
               </TouchableOpacity>
               {habit.type === 'yesno' && (
                 <Text style={styles.streakText}>{getProgressText(habit)}</Text>
@@ -173,6 +194,7 @@ export default function HomeScreen() {
         visible={isAddModalVisible}
         onClose={() => setIsAddModalVisible(false)}
         onSubmit={handleAddHabit}
+        onHabitAdded={loadHabits}
       />
 
       {selectedHabit && (
@@ -302,5 +324,15 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     color: '#666',
     textAlign: 'center',
+  },
+  habitNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  trackingStatus: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });

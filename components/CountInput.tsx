@@ -23,6 +23,17 @@ interface CountInputProps {
 
 const screenWidth = Dimensions.get('window').width;
 
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayName = days[date.getDay()];
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthName = monthNames[date.getMonth()];
+  const dayOfMonth = date.getDate();
+  
+  return `${dayName}, ${monthName} ${dayOfMonth}`;
+};
+
 export default function CountInput({
   visible,
   onClose,
@@ -52,11 +63,7 @@ export default function CountInput({
           <Text style={styles.title}>{habitName}</Text>
           {date && (
             <Text style={styles.date}>
-              {date.toLocaleDateString(undefined, { 
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric'
-              })}
+              {formatDate(typeof date === 'string' ? date : date.toISOString())}
             </Text>
           )}
           <TextInput
