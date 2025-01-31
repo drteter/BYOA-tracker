@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert, Platform, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { habitService } from '../../services/habitService';
 import { Habit } from '../../types/habit';
@@ -113,11 +113,20 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
-      <Text style={styles.title}>Habit Tracker</Text>
+      <Text style={styles.title}>Tempo</Text>
       
       {isLoading && <Text style={styles.loadingText}>Loading...</Text>}
       
       <ScrollView style={styles.habitList}>
+        <View style={styles.heroContainer}>
+          <Image 
+            source={require('../../assets/images/melody-line.png')} 
+            style={styles.heroImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.caption}>The end of a melody is not its point.</Text>
+        </View>
+
         {habits.map((habit) => (
           <TouchableOpacity
             key={habit.id}
@@ -277,5 +286,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#007AFF',
     fontWeight: '600',
+  },
+  heroContainer: {
+    marginBottom: 30,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  heroImage: {
+    width: '100%',
+    height: 120,
+    marginBottom: 10,
+  },
+  caption: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: '#666',
+    textAlign: 'center',
   },
 });
