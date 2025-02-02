@@ -4,33 +4,20 @@ import { View, ActivityIndicator, Text } from 'react-native';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { getApps, initializeApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { getAuth, initializeAuth, browserLocalPersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { firebaseConfig } from '../config/firebase';
 
-// Initialize Firebase with error handling
-try {
+// Initialize Firebase only once
+if (!getApps().length) {
+  const app = initializeApp(firebaseConfig);
   if (Platform.OS === 'web') {
-    if (!getApps().length) {
-      console.log('Initializing Firebase for web...');
-      const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-      initializeAuth(app, {
-        // Use browser's local storage instead of AsyncStorage for web
-        persistence: undefined
+    const auth = getAuth(app);
+    auth.setPersistence(browserLocalPersistence)
+      .catch(error => {
+        console.error("Auth persistence error:", error);
       });
-    }
-  } else {
-    if (!getApps().length) {
-      console.log('Initializing Firebase for native...');
-      const app = initializeApp(firebaseConfig);
-      initializeAuth(app, {
-        persistence: getReactNativePersistence(AsyncStorage)
-      });
-    }
   }
-} catch (error) {
-  console.error('Firebase initialization error:', error);
 }
 
 // Keep the splash screen visible while we fetch resources
@@ -45,7 +32,7 @@ export default function App() {
       try {
         console.log('Preparing app...');
         // Add any initialization logic here
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Give Firebase a moment to initialize
+        await new Promise(resolve => setTimeout(resolve, 500));
       } catch (e) {
         console.warn('Preparation error:', e);
       } finally {
@@ -96,9 +83,7 @@ function RootLayoutNav() {
       <Stack
         screenOptions={{
           headerShown: false,
-          ...(Platform.OS === 'web' ? {
-            animation: 'none',
-          } : {}),
+          animation: Platform.OS === 'web' ? 'none' : 'default',
         }}
       >
         <Stack.Screen 
