@@ -1,35 +1,71 @@
 import { Stack, SplashScreen, Redirect } from 'expo-router';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import { View, ActivityIndicator } from 'react-native';
-import { useEffect } from 'react';
+import { View, ActivityIndicator, Text } from 'react-native';
+import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { getApps, initializeApp } from 'firebase/app';
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { firebaseConfig } from '../config/firebase';
 
-// Add a check for web platform before initializing Firebase
-if (Platform.OS === 'web') {
-  if (!getApps().length) {
-    const app = initializeApp(firebaseConfig);
-    initializeAuth(app, {
-      // Use browser's local storage instead of AsyncStorage for web
-      persistence: undefined
-    });
+// Initialize Firebase with error handling
+try {
+  if (Platform.OS === 'web') {
+    if (!getApps().length) {
+      console.log('Initializing Firebase for web...');
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      initializeAuth(app, {
+        // Use browser's local storage instead of AsyncStorage for web
+        persistence: undefined
+      });
+    }
+  } else {
+    if (!getApps().length) {
+      console.log('Initializing Firebase for native...');
+      const app = initializeApp(firebaseConfig);
+      initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage)
+      });
+    }
   }
-} else {
-  if (!getApps().length) {
-    const app = initializeApp(firebaseConfig);
-    initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage)
-    });
-  }
+} catch (error) {
+  console.error('Firebase initialization error:', error);
 }
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Prepare the app
+    async function prepare() {
+      try {
+        console.log('Preparing app...');
+        // Add any initialization logic here
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Give Firebase a moment to initialize
+      } catch (e) {
+        console.warn('Preparation error:', e);
+      } finally {
+        console.log('App preparation complete');
+        setIsReady(true);
+        SplashScreen.hideAsync();
+      }
+    }
+
+    prepare();
+  }, []);
+
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <AuthProvider>
       <RootLayoutNav />
