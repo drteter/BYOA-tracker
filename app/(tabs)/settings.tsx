@@ -69,18 +69,43 @@ export default function SettingsScreen() {
     goal?: number;
     timeFrame?: TimeFrame;
     weeklyFrequency?: number;
+    isPaused?: boolean;
   }) => {
     if (!selectedHabit) return;
 
     try {
       setIsLoading(true);
+      // First update the name if it changed
+      if (data.name !== selectedHabit.name) {
+        await habitService.updateHabitName(selectedHabit.id, data.name);
+      }
+      // Then update other properties
       await habitService.updateHabitGoals(selectedHabit.id, {
         goal: data.goal,
         timeFrame: data.timeFrame,
-        weeklyFrequency: data.weeklyFrequency
+        weeklyFrequency: data.weeklyFrequency,
+        isPaused: data.isPaused
       });
+      
+      // Immediately update the local habits state with the new data
+      const updatedHabits = habits.map(habit => 
+        habit.id === selectedHabit.id 
+          ? { 
+              ...habit, 
+              name: data.name,
+              goal: data.goal,
+              timeFrame: data.timeFrame,
+              weeklyFrequency: data.weeklyFrequency,
+              isPaused: data.isPaused
+            }
+          : habit
+      );
+      setHabits(updatedHabits);
+      
       setIsEditModalVisible(false);
       setSelectedHabit(null);
+      
+      // Also reload from server to ensure complete sync
       await loadHabits();
     } catch (error) {
       console.error('Error updating habit:', error);

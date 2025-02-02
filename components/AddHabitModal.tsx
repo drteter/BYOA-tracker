@@ -12,6 +12,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
+  Switch,
 } from 'react-native';
 import { HabitType, TimeFrame } from '../types/habit';
 import { habitService } from '../services/habitService';
@@ -26,6 +27,7 @@ interface AddHabitModalProps {
     goal?: number;
     timeFrame?: TimeFrame;
     weeklyFrequency?: number;
+    isPaused?: boolean;
   }) => void;
   initialValues?: {
     name?: string;
@@ -33,6 +35,7 @@ interface AddHabitModalProps {
     goal?: number;
     timeFrame?: TimeFrame;
     weeklyFrequency?: number;
+    isPaused?: boolean;
   };
   isEditing?: boolean;
   onHabitAdded?: () => void;
@@ -46,6 +49,7 @@ export default function AddHabitModal({ visible, onClose, onSubmit, initialValue
   const [weeklyFrequency, setWeeklyFrequency] = useState(
     initialValues?.weeklyFrequency?.toString() || '5'
   );
+  const [isPaused, setIsPaused] = useState(initialValues?.isPaused || false);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -55,6 +59,7 @@ export default function AddHabitModal({ visible, onClose, onSubmit, initialValue
       setGoal(initialValues?.goal?.toString() || '');
       setTimeFrame(initialValues?.timeFrame || 'day');
       setWeeklyFrequency(initialValues?.weeklyFrequency?.toString() || '5');
+      setIsPaused(initialValues?.isPaused || false);
     }
   }, [visible, initialValues]);
 
@@ -78,6 +83,7 @@ export default function AddHabitModal({ visible, onClose, onSubmit, initialValue
         goal: goal ? parseInt(goal, 10) : undefined,
         timeFrame,
         weeklyFrequency: parseInt(weeklyFrequency, 10),
+        isPaused,
       });
       onClose();
       if (onHabitAdded) onHabitAdded();
@@ -190,6 +196,23 @@ export default function AddHabitModal({ visible, onClose, onSubmit, initialValue
                   </View>
                 </View>
               </>
+            )}
+
+            {isEditing && (
+              <View style={styles.pauseContainer}>
+                <Text style={styles.label}>Pause Habit?</Text>
+                <View style={styles.pauseRow}>
+                  <Text style={styles.pauseText}>
+                    {isPaused ? 'Paused!' : 'Active'}
+                  </Text>
+                  <Switch
+                    value={isPaused}
+                    onValueChange={setIsPaused}
+                    trackColor={{ false: '#767577', true: '#81b0ff' }}
+                    thumbColor={isPaused ? '#f5dd4b' : '#f4f3f4'}
+                  />
+                </View>
+              </View>
             )}
 
             <View style={styles.buttonContainer}>
@@ -339,5 +362,18 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: 'white',
+  },
+  pauseContainer: {
+    marginTop: 20,
+  },
+  pauseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  pauseText: {
+    fontSize: 16,
+    color: '#666',
   },
 }); 

@@ -1,5 +1,6 @@
 export type HabitType = 'yesno' | 'count';
 export type TimeFrame = 'day' | 'week' | 'month' | 'year';
+export type WeekDay = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 
 export interface Habit {
   id: string;
@@ -14,6 +15,8 @@ export interface Habit {
   completedDates: string[]; // ISO date strings
   // For count-type habits, store the count for each date
   counts: Record<string, number>;
+  scheduledDays?: WeekDay[]; // New field for scheduled days
+  isPaused?: boolean;
 }
 
 export interface HabitCompletion {

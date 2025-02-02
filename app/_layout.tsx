@@ -4,11 +4,18 @@ import { View, ActivityIndicator } from 'react-native';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { getApps, initializeApp } from 'firebase/app';
+import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { firebaseConfig } from '../config/firebase';
 
 // Initialize Firebase for web if not already initialized
 if (Platform.OS === 'web' && getApps().length === 0) {
   initializeApp(firebaseConfig);
+} else if (Platform.OS !== 'web' && getApps().length === 0) {
+  const app = initializeApp(firebaseConfig);
+  initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage)
+  });
 }
 
 // Keep the splash screen visible while we fetch resources

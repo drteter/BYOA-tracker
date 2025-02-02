@@ -1,4 +1,4 @@
-package com.tracker2
+package com.drteter.tracker2
 
 import android.app.Application
 import android.content.res.Configuration
