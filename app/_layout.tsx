@@ -8,14 +8,22 @@ import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { firebaseConfig } from '../config/firebase';
 
-// Initialize Firebase for web if not already initialized
-if (Platform.OS === 'web' && getApps().length === 0) {
-  initializeApp(firebaseConfig);
-} else if (Platform.OS !== 'web' && getApps().length === 0) {
-  const app = initializeApp(firebaseConfig);
-  initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
-  });
+// Add a check for web platform before initializing Firebase
+if (Platform.OS === 'web') {
+  if (!getApps().length) {
+    const app = initializeApp(firebaseConfig);
+    initializeAuth(app, {
+      // Use browser's local storage instead of AsyncStorage for web
+      persistence: undefined
+    });
+  }
+} else {
+  if (!getApps().length) {
+    const app = initializeApp(firebaseConfig);
+    initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    });
+  }
 }
 
 // Keep the splash screen visible while we fetch resources
