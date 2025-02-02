@@ -1,12 +1,17 @@
 export default {
   expo: {
-    name: "habit-tracker",
-    // ... other existing config
+    name: "BYOA-tracker",
+    slug: "BYOA-tracker",
+    version: "1.0.0",
     web: {
-      bundler: "metro",
+      bundler: "webpack",
       output: "static",
-      favicon: "./assets/favicon.png",
-      baseUrl: "/habit-tracker" // replace with your repo name
+      publicPath: "/BYOA-tracker/",
+    },
+    extra: {
+      eas: {
+        projectId: "your-project-id"
+      }
     }
   }
 }; 
