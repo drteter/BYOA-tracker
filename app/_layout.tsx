@@ -1,27 +1,58 @@
 import { Stack, SplashScreen, Redirect } from 'expo-router';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import { View, ActivityIndicator } from 'react-native';
-import { useEffect } from 'react';
+import { View, ActivityIndicator, Text } from 'react-native';
+import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { getApps, initializeApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { getAuth, initializeAuth, browserLocalPersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { firebaseConfig } from '../config/firebase';
 
-// Initialize Firebase for web if not already initialized
-if (Platform.OS === 'web' && getApps().length === 0) {
-  initializeApp(firebaseConfig);
-} else if (Platform.OS !== 'web' && getApps().length === 0) {
+// Initialize Firebase only once
+if (!getApps().length) {
   const app = initializeApp(firebaseConfig);
-  initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
-  });
+  if (Platform.OS === 'web') {
+    const auth = getAuth(app);
+    auth.setPersistence(browserLocalPersistence)
+      .catch(error => {
+        console.error("Auth persistence error:", error);
+      });
+  }
 }
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Prepare the app
+    async function prepare() {
+      try {
+        console.log('Preparing app...');
+        // Add any initialization logic here
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (e) {
+        console.warn('Preparation error:', e);
+      } finally {
+        console.log('App preparation complete');
+        setIsReady(true);
+        SplashScreen.hideAsync();
+      }
+    }
+
+    prepare();
+  }, []);
+
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <AuthProvider>
       <RootLayoutNav />
@@ -52,9 +83,7 @@ function RootLayoutNav() {
       <Stack
         screenOptions={{
           headerShown: false,
-          ...(Platform.OS === 'web' ? {
-            animation: 'none',
-          } : {}),
+          animation: Platform.OS === 'web' ? 'none' : 'default',
         }}
       >
         <Stack.Screen 
