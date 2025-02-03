@@ -1,11 +1,9 @@
+import React from 'react';
 import { Stack, SplashScreen, Redirect } from 'expo-router';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import { View, ActivityIndicator, Text } from 'react-native';
-import { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { View, ActivityIndicator, Text, Platform } from 'react-native';
 import { getApps, initializeApp } from 'firebase/app';
-import { getAuth, initializeAuth, browserLocalPersistence } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getAuth, browserLocalPersistence } from 'firebase/auth';
 import { firebaseConfig } from '../config/firebase';
 
 // Initialize Firebase only once
@@ -24,9 +22,9 @@ if (!getApps().length) {
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  const [isReady, setIsReady] = useState(false);
+  const [isReady, setIsReady] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     // Prepare the app
     async function prepare() {
       try {
@@ -38,7 +36,7 @@ export default function App() {
       } finally {
         console.log('App preparation complete');
         setIsReady(true);
-        SplashScreen.hideAsync();
+        await SplashScreen.hideAsync();
       }
     }
 
@@ -63,9 +61,9 @@ export default function App() {
 function RootLayoutNav() {
   const { loading, user } = useAuth();
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!loading) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(console.error);
     }
   }, [loading]);
 
