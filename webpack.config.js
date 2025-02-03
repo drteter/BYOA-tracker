@@ -15,12 +15,16 @@ module.exports = async function (env, argv) {
     'expo-router': path.resolve(__dirname, 'node_modules/expo-router'),
   };
 
-  // Explicitly set the fromDir parameter
+  // Only apply fromDir to babel-loader
   if (config.module && config.module.rules) {
     config.module.rules.forEach(rule => {
       if (rule.use && Array.isArray(rule.use)) {
         rule.use.forEach(loader => {
-          if (loader.options && loader.options.fromDir === undefined) {
+          if (
+            loader.loader && 
+            loader.loader.includes('babel-loader') && 
+            loader.options
+          ) {
             loader.options.fromDir = path.resolve(__dirname);
           }
         });
