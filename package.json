@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "test": "jest --watchAll",
     "lint": "expo lint",
-    "build": "expo export:web",
+    "build": "npm install --legacy-peer-deps && expo export:web",
     "predeploy": "npm run build"
   },
   "jest": {
@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
-    "@expo/webpack-config": "^18.1.4",
+    "@expo/webpack-config": "^19.0.0",
     "@react-native-async-storage/async-storage": "^1.23.1",
     "@react-native-firebase/app": "^21.7.1",
     "@react-navigation/bottom-tabs": "^7.2.0",
