@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "test": "jest --watchAll",
     "lint": "expo lint",
-    "build": "npm install --legacy-peer-deps && expo export:web",
+    "build": "rm -rf node_modules && npm install --legacy-peer-deps && expo export:web",
     "predeploy": "npm run build"
   },
   "jest": {
@@ -33,7 +33,7 @@
     "expo-haptics": "~14.0.1",
     "expo-linear-gradient": "~14.0.2",
     "expo-linking": "~7.0.5",
-    "expo-router": "~4.0.17",
+    "expo-router": "^3.4.8",
     "expo-splash-screen": "~0.29.21",
     "expo-status-bar": "~2.0.1",
     "expo-symbols": "~0.2.1",
